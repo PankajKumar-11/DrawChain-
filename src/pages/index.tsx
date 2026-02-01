@@ -75,6 +75,12 @@ export default function Home() {
           setTimeout(() => setMeme(null), 3000)
         }
       })
+
+      newSocket.on('join-error', (msg: string) => {
+        alert(msg)
+        setHasJoined(false)
+        setView('JOIN') // Ensure we stay/go back to join view
+      })
     }
 
     socketInitializer()
@@ -330,7 +336,10 @@ export default function Home() {
                         </div>
                         <span className="text-2xl filter drop-shadow-sm">{AVATARS[(game!.players.indexOf(p)) % AVATARS.length]}</span>
                         <div className="flex flex-col leading-tight">
-                          <span className="text-base">{p.name} {socket?.id === p.id && '(You)'}</span>
+                          <span className="text-base flex items-center gap-2">
+                            {p.name}
+                            {socket?.id === p.id && <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full border border-blue-200 font-bold">You</span>}
+                          </span>
                           {currentDrawerId === p.id && <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Drawing</span>}
                         </div>
                       </span>
@@ -439,9 +448,10 @@ export default function Home() {
                         {sortedPlayers.map((p, i) => (
                           <div key={p.id} className={`flex flex-col p-2 rounded ${i === 0 ? 'bg-yellow-100 border-2 border-yellow-400' : 'bg-gray-50 border border-gray-200'}`}>
                             <div className="flex justify-between w-full text-base font-hand">
-                              <span className="font-bold flex gap-2">
+                              <span className="font-bold flex gap-2 items-center">
                                 <span>{i === 0 ? '👑' : `#${i + 1}`}</span>
                                 {p.name}
+                                {socket?.id === p.id && <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full border border-blue-200">You</span>}
                               </span>
                               <span className="font-bold">{p.score}</span>
                             </div>

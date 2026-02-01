@@ -142,6 +142,14 @@ export default function SocketHandler(req: any, res: any) {
 
                 let game = games[roomId]
                 if (!game) {
+                    // FIX: If we are just "Joining" (no config usually implies join flow), 
+                    // and room doesn't exist -> ERROR.
+                    // "Create" flow sends config.
+                    if (!config) {
+                        socket.emit('join-error', 'Room not found! Check the ID or Create a new room.')
+                        return
+                    }
+
                     game = {
                         roomId,
                         status: 'LOBBY',
@@ -262,6 +270,9 @@ export default function SocketHandler(req: any, res: any) {
                             game.status = 'ENDED'
                             const winner = game.players[0]
                             winner.score += 100 // Bonus for survival
+
+                            // Ensure winner is host so they can restart
+                            game.hostId = winner.id
 
                             io.to(roomId).emit('game-update', getPublicState(game, winner.id))
                             io.to(roomId).emit('system-message', 'Everyone left! You win by default! 🏆')
