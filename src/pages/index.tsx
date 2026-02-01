@@ -353,10 +353,49 @@ export default function Home() {
             {/* Center: Canvas & Game Area */}
             <div className="bg-white p-1 rounded-xl lg:rounded-3xl shadow-xl flex-1 w-full sketch-border relative flex flex-col min-h-0 overflow-hidden shrink-0 order-first lg:order-none z-0">
 
+  const handleJoin = (e: React.FormEvent) => {
+                e.preventDefault()
+    if (username && socket) {
+      // Normalize Room ID: trim whitespace and lowercase to avoid confusion
+      const cleanRoomId = (roomId || 'room1').trim().toLowerCase()
+              // Update state so UI reflects what was actually joined
+              setRoomId(cleanRoomId)
+
+              if (view === 'CREATE') {
+                socket.emit('join-room', { roomId: cleanRoomId, username, config: { rounds, drawTime }, avatar })
+              } else {
+                socket.emit('join-room', { roomId: cleanRoomId, username, avatar })
+              }
+              setHasJoined(true)
+    }
+  }
+
+  const copyRoomId = () => {
+      if (game?.roomId) {
+                navigator.clipboard.writeText(game.roomId)
+          // Could enable a small toast here, but for now just console or visual feedback on button if needed
+          alert(`Copied Room ID: ${game.roomId}`)
+      }
+  }
+
+              // ... (rest of functions)
+
+              // Derived state
+              const isDrawer = game && socket && game.players[game.drawerIndex]?.id === socket.id
+              const currentDrawerId = game?.players[game.drawerIndex]?.id
+              // ...
+
+              // ...
+
               {/* Desktop Header */}
               <div className="hidden lg:flex bg-gray-100 p-2 rounded-t-3xl justify-between items-center px-4 border-b z-10 shrink-0">
                 <div className="text-lg flex flex-col leading-tight">
-                  <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Room: {game?.roomId}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Room: <span className="text-black">{game?.roomId}</span></span>
+                    <button onClick={copyRoomId} className="bg-white border border-gray-300 rounded px-1.5 py-0.5 hover:bg-gray-50 text-[10px] uppercase font-bold text-gray-500 shadow-sm active:translate-y-px transition-all" title="Copy Room ID">
+                      📋 Copy
+                    </button>
+                  </div>
                   <span className="text-sm text-gray-500 font-bold">{game?.status === 'LOBBY' ? 'Waiting to Start' : `Round ${game?.currentRound} / ${game?.maxRounds}`}</span>
                   {game?.status === 'DRAWING' && <span className="font-bold text-blue-600 animate-pulse">🎨 {currentDrawerName} is Drawing...</span>}
                 </div>
