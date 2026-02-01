@@ -129,180 +129,217 @@ const startRound = (io: Server, roomId: string, word: string) => {
 
 
 export default function SocketHandler(req: any, res: any) {
-    if (res.socket.server.io) {
-        // Already running
-    } else {
+    if (!res.socket.server.io) {
         const io = new Server(res.socket.server)
         res.socket.server.io = io
+    }
 
-        io.on('connection', (socket: Socket) => {
+    const io = res.socket.server.io as Server
 
-            socket.on('join-room', ({ roomId, username, config }) => {
-                socket.join(roomId)
+    // Hot-Reload Fix: Remove old listener to allow code updates to apply
+    const oldHandler = (res.socket.server as any)._socketHandler
+    if (oldHandler) {
+        io.off('connection', oldHandler)
+    }
 
-                let game = games[roomId]
-                if (!game) {
-                    // FIX: If we are just "Joining" (no config usually implies join flow), 
-                    // and room doesn't exist -> ERROR.
-                    // "Create" flow sends config.
-                    if (!config) {
-                        socket.emit('join-error', 'Room not found! Check the ID or Create a new room.')
-                        return
-                    }
+    const onConnection = (socket: Socket) => {
 
-                    game = {
-                        roomId,
-                        status: 'LOBBY',
-                        players: [],
-                        drawerIndex: 0,
-                        currentWord: '',
-                        wordOptions: [],
-                        maxRounds: config?.rounds || 3,
-                        currentRound: 1,
-                        drawTime: config?.drawTime || 60,
-                        timeLeft: 0,
-                        timer: null,
-                        hostId: socket.id
-                    }
-                    games[roomId] = game
+        socket.on('join-room', ({ roomId, username, config, avatar }) => {
+            socket.join(roomId)
+
+            let game = games[roomId]
+            if (!game) {
+                // Check if joining valid room
+                if (!config && !games[roomId]) {
+                    socket.emit('join-error', 'Room not found! Check the ID or Create a new room.')
+                    return
                 }
 
-                // Check if player exists or rejoin? For now simple add
-                // Remove previous instance if any to avoid dups?
-                game.players = game.players.filter(p => p.id !== socket.id)
-                game.players.push({ id: socket.id, name: username, score: 0, guessed: false })
-
-                // Sync state
-                io.to(roomId).emit('game-update', getPublicState(game, socket.id)) // Initial sync just for joined user mainly, or use loop
-                game.players.forEach(p => io.to(p.id).emit('game-update', getPublicState(game, p.id)))
-            })
-
-            socket.on('start-game', ({ roomId, config }) => {
-                const game = games[roomId]
-                // Only host?
-                // if (game.hostId !== socket.id) return; 
-
-                if (game) {
-                    if (game.players.length < 2) {
-                        socket.emit('system-message', 'Need at least 2 players!')
-                        return
-                    }
-                    game.maxRounds = config?.rounds || game.maxRounds
-                    game.drawTime = config?.drawTime || game.drawTime
-                    game.currentRound = 1
-                    game.drawerIndex = -1 // Will prompt inc to 0
-                    game.players.forEach(p => { p.score = 0; p.guessed = false })
-                    nextTurn(io, roomId)
+                game = {
+                    roomId,
+                    status: 'LOBBY',
+                    players: [],
+                    drawerIndex: 0,
+                    currentWord: '',
+                    wordOptions: [],
+                    maxRounds: config?.rounds || 3,
+                    currentRound: 1,
+                    drawTime: config?.drawTime || 60,
+                    timeLeft: 0,
+                    timer: null,
+                    hostId: socket.id
                 }
-            })
+                games[roomId] = game
+            }
 
-            socket.on('select-word', ({ roomId, word }) => {
-                const game = games[roomId]
-                if (game && game.players[game.drawerIndex].id === socket.id) {
-                    startRound(io, roomId, word)
+            // Sync/Reset player if rejoining with same socket? 
+            // Actually new socket ID every refresh, so we just add.
+            // Check if name is taken? (Optional, but good for clarity)
+
+            // Add Player: Idempotent add/update
+            const existingInd = game.players.findIndex(p => p.id === socket.id)
+            if (existingInd !== -1) {
+                // Update existing
+                game.players[existingInd].name = username
+                game.players[existingInd].id = socket.id // Same ID
+                // avatar update?
+            } else {
+                game.players.push({
+                    id: socket.id,
+                    name: username,
+                    score: 0,
+                    guessed: false,
+                })
+            }
+
+            // Sync state
+            io.to(roomId).emit('game-update', getPublicState(game, socket.id))
+            game.players.forEach(p => io.to(p.id).emit('game-update', getPublicState(game, p.id)))
+        })
+
+        socket.on('start-game', ({ roomId, config }) => {
+            const game = games[roomId]
+            if (game) {
+                if (game.players.length < 2) {
+                    socket.emit('system-message', 'Need at least 2 players!')
+                    return
                 }
-            })
+                game.maxRounds = config?.rounds || game.maxRounds
+                game.drawTime = config?.drawTime || game.drawTime
+                game.currentRound = 1
+                game.drawerIndex = -1
+                game.players.forEach(p => { p.score = 0; p.guessed = false })
+                nextTurn(io, roomId)
+            }
+        })
 
-            socket.on('draw', (data) => {
-                socket.to(data.roomId).emit('draw', data)
-            })
+        socket.on('select-word', ({ roomId, word }) => {
+            const game = games[roomId]
+            if (game && game.players[game.drawerIndex]?.id === socket.id) {
+                startRound(io, roomId, word)
+            }
+        })
 
-            socket.on('fill', (data) => {
-                socket.to(data.roomId).emit('fill', data)
-            })
+        socket.on('draw', (data) => {
+            socket.to(data.roomId).emit('draw', data)
+        })
 
-            socket.on('clear', (roomId) => {
-                socket.to(roomId).emit('clear')
-            })
+        socket.on('fill', (data) => {
+            socket.to(data.roomId).emit('fill', data)
+        })
 
-            socket.on('chat-message', (data) => {
-                const game = games[data.roomId]
-                if (game && game.status === 'DRAWING') {
-                    if (data.text.trim().toLowerCase() === game.currentWord.toLowerCase()) {
-                        // Exact match
-                        const player = game.players.find(p => p.id === socket.id)
-                        if (player && !player.guessed && player.id !== game.players[game.drawerIndex].id) {
-                            player.guessed = true
-                            const points = Math.max(10, Math.ceil(game.timeLeft / game.drawTime * 500))
-                            player.score += points
-                            socket.to(data.roomId).emit('system-message', `🎉 ${data.user} guessed the word!`)
-                            socket.emit('system-message', `🎉 You guessed the word! (+${points})`)
+        socket.on('clear', (roomId) => {
+            socket.to(roomId).emit('clear')
+        })
 
-                            // Drawer gets points too?
-                            const drawer = game.players[game.drawerIndex]
-                            drawer.score += 50
+        socket.on('chat-message', (data) => {
+            const game = games[data.roomId]
+            if (game && game.status === 'DRAWING') {
+                if (data.text.trim().toLowerCase() === game.currentWord.toLowerCase()) {
+                    const player = game.players.find(p => p.id === socket.id)
+                    if (player && !player.guessed && player.id !== game.players[game.drawerIndex].id) {
+                        player.guessed = true
+                        const points = Math.max(10, Math.ceil(game.timeLeft / game.drawTime * 500))
+                        player.score += points
+                        socket.to(data.roomId).emit('system-message', `🎉 ${data.user} guessed the word!`)
+                        socket.emit('system-message', `🎉 You guessed the word! (+${points})`)
 
-                            io.to(data.roomId).emit('game-update', getPublicState(game, socket.id)) // Quick score update
+                        const drawer = game.players[game.drawerIndex]
+                        drawer.score += 50
 
-                            // Check if all guessed
-                            const guessers = game.players.filter(p => p.id !== drawer.id)
-                            if (guessers.every(p => p.guessed)) {
-                                io.to(data.roomId).emit('system-message', 'Everyone guessed it!')
-                                nextTurn(io, data.roomId)
-                            }
-                            return // Don't emit chat message
+                        io.to(data.roomId).emit('game-update', getPublicState(game, socket.id))
+                        game.players.forEach(p => io.to(p.id).emit('game-update', getPublicState(game, p.id)))
+
+                        const guessers = game.players.filter(p => p.id !== drawer.id)
+                        if (guessers.every(p => p.guessed)) {
+                            io.to(data.roomId).emit('system-message', 'Everyone guessed it!')
+                            nextTurn(io, data.roomId)
                         }
+                        return
                     }
                 }
-                io.to(data.roomId).emit('chat-message', data)
-            })
+            }
+            io.to(data.roomId).emit('chat-message', data)
+        })
 
-            socket.on('disconnect', () => {
-                // Find which room/game the socket was in
-                // We'll iterate games since we didn't store mapping, or could use socket.rooms but that might be cleared already
-                for (const roomId in games) {
-                    const game = games[roomId]
-                    const playerIndex = game.players.findIndex(p => p.id === socket.id)
+        socket.on('disconnect', () => {
+            for (const roomId in games) {
+                const game = games[roomId]
+                const playerIndex = game.players.findIndex(p => p.id === socket.id)
 
-                    if (playerIndex !== -1) {
-                        // User was in this game
-                        const player = game.players[playerIndex]
-                        game.players.splice(playerIndex, 1)
+                if (playerIndex !== -1) {
+                    const player = game.players[playerIndex]
+                    const wasDrawer = playerIndex === game.drawerIndex
+                    const wasHost = game.hostId === socket.id
 
-                        if (game.players.length === 0) {
-                            // Room empty, delete game
-                            if (game.timer) clearInterval(game.timer)
-                            delete games[roomId]
-                            console.log(`Game ${roomId} deleted (empty)`)
-                        } else if (game.status !== 'LOBBY' && game.players.length === 1) {
-                            // Only 1 player remains in active game -> THEY WIN
-                            if (game.timer) clearInterval(game.timer)
-                            game.status = 'ENDED'
-                            const winner = game.players[0]
-                            winner.score += 100 // Bonus for survival
+                    // Remove player
+                    game.players.splice(playerIndex, 1)
 
-                            // Ensure winner is host so they can restart
-                            game.hostId = winner.id
+                    // Adjust drawerIndex if needed
+                    if (playerIndex < game.drawerIndex) {
+                        game.drawerIndex--
+                    }
 
-                            io.to(roomId).emit('game-update', getPublicState(game, winner.id))
-                            io.to(roomId).emit('system-message', 'Everyone left! You win by default! 🏆')
-                            io.to(roomId).emit('game-ended', game.players)
+                    // Check Game Over or Empty
+                    if (game.players.length === 0) {
+                        if (game.timer) clearInterval(game.timer)
+                        delete games[roomId]
+                        console.log(`Game ${roomId} deleted (empty)`)
+                    } else if (game.status !== 'LOBBY' && game.players.length < 2) {
+                        // Winner
+                        if (game.timer) clearInterval(game.timer)
+                        game.status = 'ENDED'
+                        const winner = game.players[0]
+                        winner.score += 100
+                        game.hostId = winner.id
+
+                        io.to(roomId).emit('game-update', getPublicState(game, winner.id))
+                        io.to(roomId).emit('system-message', 'Everyone left! You win! 🏆')
+                        io.to(roomId).emit('game-ended', game.players)
+                    } else {
+                        // Game Continues
+                        if (wasHost) {
+                            game.hostId = game.players[0].id
+                            io.to(roomId).emit('system-message', `${game.players[0].name} is now the Host! 👑`)
+                        }
+
+                        if (wasDrawer && game.status === 'DRAWING') {
+                            io.to(roomId).emit('system-message', 'Drawer disconnected! Skipping turn...')
+                            // Decrement index so nextTurn increments it to the *current* slot (which is the next player)
+                            game.drawerIndex--
+                            nextTurn(io, roomId)
                         } else {
-                            // Notify others
-                            // If drawer left, we might need to reset round or pass turn. 
-                            if (game.status === 'DRAWING' && game.drawerIndex === playerIndex) {
-                                io.to(roomId).emit('system-message', 'Drawer disconnected! Skipping turn...')
-                                nextTurn(io, roomId)
-                            } else {
-                                if (game.drawerIndex >= game.players.length) game.drawerIndex = 0
-
-                                // Host Migration
-                                if (game.hostId === socket.id) {
-                                    game.hostId = game.players[0].id
-                                    io.to(roomId).emit('system-message', `${game.players[0].name} is now the Host! 👑`)
-                                    // We need to re-emit game update so client knows who host is (for Start button)
-                                    game.players.forEach(p => io.to(p.id).emit('game-update', getPublicState(game, p.id)))
+                            // Check if everyone guessed (if only guessers remain)
+                            if (game.status === 'DRAWING') {
+                                const drawerId = game.players[game.drawerIndex]?.id
+                                if (drawerId) {
+                                    const guessers = game.players.filter(p => p.id !== drawerId)
+                                    if (guessers.length > 0 && guessers.every(p => p.guessed)) {
+                                        io.to(roomId).emit('system-message', 'Everyone guessed it!')
+                                        nextTurn(io, roomId)
+                                    }
+                                } else {
+                                    // Should not happen if wasDrawer handled above, but safety
+                                    nextTurn(io, roomId)
                                 }
-
-                                io.to(roomId).emit('game-update', getPublicState(game, game.players[0].id))
-                                io.to(roomId).emit('system-message', `${player.name} left.`)
                             }
+
+                            game.players.forEach(p => {
+                                io.to(p.id).emit('game-update', getPublicState(game, p.id))
+                            })
+                            io.to(roomId).emit('system-message', `${player.name} left.`)
                         }
-                        break // Found the game, exit loop
                     }
+                    break
                 }
-            })
+            }
         })
     }
+
+    io.on('connection', onConnection)
+        // Store handle for cleanup
+        ; (res.socket.server as any)._socketHandler = onConnection
+
     res.end()
 }
+

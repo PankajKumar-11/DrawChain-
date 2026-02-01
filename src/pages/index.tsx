@@ -51,24 +51,30 @@ export default function Home() {
   const MEMES = ["Big Brain Time! 🧠", "Picasso? 🎨", "Sketch God! ✨", "Too Fast! ⚡", "Sniper! 🎯"]
 
   useEffect(() => {
+    let newSocket: Socket | null = null;
+    let isMounted = true;
+
     const socketInitializer = async () => {
       await fetch('/api/socket')
-      const newSocket = io()
+      if (!isMounted) return;
+
+      newSocket = io()
       setSocket(newSocket)
 
       newSocket.on('connect', () => {
-        console.log('Connected to socket')
+        console.log('Connected to socket', newSocket?.id)
       })
 
       newSocket.on('game-update', (data: GameState) => {
-        setGame(data)
+        if (isMounted) setGame(data)
       })
 
       newSocket.on('timer-update', (time: number) => {
-        setTimeLeft(time)
+        if (isMounted) setTimeLeft(time)
       })
 
       newSocket.on('system-message', (msg: string) => {
+        if (!isMounted) return
         if (msg.includes('guessed the word')) {
           const randomMeme = MEMES[Math.floor(Math.random() * MEMES.length)]
           setMeme(randomMeme)
@@ -77,16 +83,21 @@ export default function Home() {
       })
 
       newSocket.on('join-error', (msg: string) => {
+        if (!isMounted) return
         alert(msg)
         setHasJoined(false)
-        setView('JOIN') // Ensure we stay/go back to join view
+        setView('JOIN')
       })
     }
 
     socketInitializer()
 
     return () => {
-      socket?.disconnect()
+      isMounted = false;
+      if (newSocket) {
+        newSocket.disconnect()
+        newSocket.removeAllListeners()
+      }
     }
   }, [])
 
@@ -127,8 +138,8 @@ export default function Home() {
 
   // Derived state
   const isDrawer = game && socket && game.players[game.drawerIndex]?.id === socket.id
-  const currentDrawerId = game?.players[game.drawerIndex]?.id
-  const currentDrawerName = game?.players[game.drawerIndex]?.name || 'Unknown'
+  const currentDrawerId = game?.players[game?.drawerIndex]?.id
+  const currentDrawerName = game?.players[game?.drawerIndex]?.name || 'Unknown'
 
   // leaderboard sorting
   const sortedPlayers = game ? [...game.players].sort((a, b) => b.score - a.score) : []
@@ -354,7 +365,7 @@ export default function Home() {
 
               {/* Action Buttons */}
               <div className="flex flex-col gap-3 mt-4 shrink-0 pt-4 border-t-2 border-gray-100 border-dashed">
-                {game?.status === 'LOBBY' && game.hostId === socket?.id ? (
+                {game?.status === 'LOBBY' && game?.hostId === socket?.id ? (
                   <button onClick={startGame} className="w-full bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 shadow-[0_4px_0_rgb(22,163,74)] active:shadow-none active:translate-y-[4px] transition-all border-2 border-green-600">Start Game 🚀</button>
                 ) : (game?.status === 'LOBBY' &&
                   <div className="text-center text-gray-400 text-sm italic py-2">Waiting for host...</div>
@@ -476,7 +487,7 @@ export default function Home() {
               <div className="w-1/3 bg-white p-2 rounded-lg sketch-border shadow-sm flex flex-col overflow-hidden">
                 <div className="text-xs font-bold border-b pb-1 mb-1 text-center bg-gray-50 flex justify-between items-center px-1">
                   <span>Rankings</span>
-                  {game?.status === 'LOBBY' && game.hostId === socket?.id && <button onClick={startGame} className="text-[10px] bg-green-500 text-white px-1 rounded hover:bg-green-600">Start</button>}
+                  {game?.status === 'LOBBY' && game?.hostId === socket?.id && <button onClick={startGame} className="text-[10px] bg-green-500 text-white px-1 rounded hover:bg-green-600">Start</button>}
                 </div>
                 <ul className="flex-1 overflow-y-auto space-y-1">
                   {sortedPlayers.map((p, i) => (
@@ -487,7 +498,7 @@ export default function Home() {
                         <span className="font-bold truncate flex items-center gap-1">
                           {p.name}
                           {socket?.id === p.id && <span className="text-[8px] bg-blue-100 text-blue-600 px-1 rounded">You</span>}
-                          {game.hostId === p.id && <span className="text-[8px] bg-orange-100 text-orange-600 px-1 rounded">🏠</span>}
+                          {game?.hostId === p.id && <span className="text-[8px] bg-orange-100 text-orange-600 px-1 rounded">🏠</span>}
                         </span>
                       </div>
                       <div className="flex justify-between text-gray-500 pl-1">
