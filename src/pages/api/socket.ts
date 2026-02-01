@@ -41,8 +41,23 @@ const getPublicState = (game: Game, playerId: string) => {
 }
 
 const get3Words = () => {
+    // Pick 3 unique random indexes
+    const indices = new Set<number>()
+    while (indices.size < 3 && indices.size < WORDS.length) {
+        indices.add(Math.floor(Math.random() * WORDS.length))
+    }
+    return Array.from(indices).map(i => WORDS[i])
+}
+
+const nextTurn = (io: Server, roomId: string) => {
+    const game = games[roomId]
+    // ... (rest of function remains via context but we are just replacing get3Words definition mostly, wait replace_file_content needs contiguous)
+    // Actually I will just target get3Words function definition
     return [...WORDS].sort(() => 0.5 - Math.random()).slice(0, 3)
 }
+// Wait, I can't use "rest of function" in ReplacementContent. 
+// I will target get3Words explicitly.
+
 
 const nextTurn = (io: Server, roomId: string) => {
     const game = games[roomId]
@@ -209,8 +224,8 @@ export default function SocketHandler(req: any, res: any) {
                             player.guessed = true
                             const points = Math.max(10, Math.ceil(game.timeLeft / game.drawTime * 500))
                             player.score += points
-                            socket.to(data.roomId).emit('system-message', `${data.user} guessed the word!`)
-                            socket.emit('system-message', `You guessed the word! (+${points})`)
+                            socket.to(data.roomId).emit('system-message', `🎉 ${data.user} guessed the word!`)
+                            socket.emit('system-message', `🎉 You guessed the word! (+${points})`)
 
                             // Drawer gets points too?
                             const drawer = game.players[game.drawerIndex]

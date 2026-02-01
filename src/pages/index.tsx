@@ -385,12 +385,20 @@ export default function Home() {
               </div>
 
               {/* Mobile Info Bar (Compact) */}
-              <div className="lg:hidden bg-gray-50 p-2 border-b flex justify-between items-center shrink-0">
-                <div className="truncate max-w-[200px] flex flex-col">
-                  <span className="text-[9px] text-gray-400 font-bold uppercase">Room: {game?.roomId}</span>
+              <div className="lg:hidden bg-gray-50 p-2 border-b flex justify-between items-center shrink-0 text-xs">
+                <div className="flex flex-col gap-1 w-1/3">
+                  <div className="flex items-center gap-1">
+                    <span className="font-bold text-gray-400">Room: {game?.roomId}</span>
+                    <button onClick={copyRoomId} className="bg-white border text-gray-500 rounded px-1 shadow-sm active:scale-95">📋</button>
+                  </div>
+                  <span className="font-bold text-gray-500">Rd {game?.currentRound}/{game?.maxRounds}</span>
+                </div>
+
+                <div className="flex-1 flex justify-center">
                   {renderMobileSecretWord()}
                 </div>
-                <div className="flex items-center gap-2">
+
+                <div className="flex items-center gap-2 justify-end w-1/3">
                   {game?.status === 'DRAWING' && !isDrawer && <span className="text-[10px] text-blue-500 font-bold animate-pulse flex items-center gap-1">🎨 {currentDrawerName}</span>}
                   {game?.status !== 'LOBBY' && <span className="text-xs font-bold text-red-500 bg-white border border-red-200 px-1.5 py-0.5 rounded shadow-sm">{timeLeft}s</span>}
                 </div>
