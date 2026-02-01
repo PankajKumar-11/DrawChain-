@@ -484,7 +484,11 @@ export default function Home() {
                       <div className="flex items-center gap-1">
                         <span className={`font-mono text-[9px] w-3 h-3 flex items-center justify-center rounded-full ${i === 0 ? 'bg-yellow-300' : i === 1 ? 'bg-gray-300' : 'bg-gray-100'}`}>#{i + 1}</span>
                         <span className="text-sm scale-75 origin-left">{AVATARS[(game!.players.indexOf(p)) % AVATARS.length]}</span>
-                        <span className="font-bold truncate">{p.name}</span>
+                        <span className="font-bold truncate flex items-center gap-1">
+                          {p.name}
+                          {socket?.id === p.id && <span className="text-[8px] bg-blue-100 text-blue-600 px-1 rounded">You</span>}
+                          {game.hostId === p.id && <span className="text-[8px] bg-orange-100 text-orange-600 px-1 rounded">🏠</span>}
+                        </span>
                       </div>
                       <div className="flex justify-between text-gray-500 pl-1">
                         <span className="font-mono">{p.score}</span>
