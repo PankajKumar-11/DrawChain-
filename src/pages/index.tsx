@@ -37,6 +37,8 @@ export default function Home() {
   const [avatar, setAvatar] = useState(AVATARS[0])
   const [hasJoined, setHasJoined] = useState(false)
 
+  const [view, setView] = useState<'LANDING' | 'CREATE' | 'JOIN'>('LANDING')
+
   // Game Config
   const [rounds, setRounds] = useState(3)
   const [drawTime, setDrawTime] = useState(60)
@@ -82,10 +84,18 @@ export default function Home() {
     }
   }, [])
 
-  const joinRoom = (e: React.FormEvent) => {
+  const handleJoin = (e: React.FormEvent) => {
     e.preventDefault()
     if (username && socket) {
-      socket.emit('join-room', { roomId, username, config: { rounds, drawTime }, avatar })
+      if (view === 'CREATE') {
+        // Creating implies we want to set config
+        // Generate random room ID if empty? Or force user to pick? Let's default to room1 if empty for ease, or maybe random.
+        // For now keep explicit input.
+        socket.emit('join-room', { roomId: roomId || 'room1', username, config: { rounds, drawTime }, avatar })
+      } else {
+        // Joining, ignore config (server will ignore it anyway for existing rooms usually, or we can send null)
+        socket.emit('join-room', { roomId, username, avatar })
+      }
       setHasJoined(true)
     }
   }
@@ -181,75 +191,116 @@ export default function Home() {
       <main className="flex flex-col items-center justify-center w-full h-full p-2 md:p-4">
         {!hasJoined ? (
           <div className="w-full flex items-center justify-center">
-            <form onSubmit={joinRoom} className="bg-white p-6 md:p-10 sketch-border max-w-4xl w-full flex flex-col gap-6 relative transform rotate-1 transition hover:rotate-0 duration-300 shadow-xl m-auto">
-              {/* Passthrough visual element */}
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-32 h-8 bg-yellow-100 opacity-80 rotate-2 shadow-sm pointer-events-none"></div>
 
-              {/* Mobile Only Header inside card */}
-              <h1 className="block lg:hidden text-5xl font-bold text-center text-gray-800 tracking-wider mb-2 font-hand animate-bounce-slow" style={{ textShadow: '2px 2px 0px #ccc' }}>
-                DrawChain ✏️
-              </h1>
+            {/* VIEW 1: LANDING SELECTION */}
+            {view === 'LANDING' && (
+              <div className="flex flex-col md:flex-row gap-6 animate-fade-in-up w-full max-w-4xl justify-center items-stretch">
+                {/* Create Card */}
+                <button onClick={() => { setView('CREATE'); setRoomId(`room-${Math.floor(Math.random() * 1000)}`) }} className="flex-1 bg-white p-8 rounded-2xl sketch-border shadow-lg hover:scale-105 transition-transform group relative overflow-hidden text-left min-h-[200px] flex flex-col justify-between">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <span className="text-9xl">🎨</span>
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-bold mb-2 group-hover:text-blue-600 transition-colors font-hand">Create Room</h2>
+                    <p className="text-gray-500 font-medium">Host a new game, set the rules, and invite friends.</p>
+                  </div>
+                  <div className="mt-6 bg-blue-100 text-blue-600 font-bold py-2 px-4 rounded-lg w-fit group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    Start Hosting &rarr;
+                  </div>
+                </button>
 
-              <h2 className="text-3xl font-bold text-center mb-2 border-b-2 border-dashed border-gray-300 pb-2">Entry Pass</h2>
-
-              <div className="space-y-6">
-                {/* Avatar Selection */}
-                <div className="flex flex-col items-center">
-                  <label className="block text-lg font-semibold mb-2">Choose Avatar</label>
-                  <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar max-w-full justify-center">
-                    {AVATARS.map(a => (
-                      <button
-                        key={a}
-                        type="button"
-                        onClick={() => setAvatar(a)}
-                        className={`text-4xl p-2 rounded-xl transition-all hover:scale-110 hover:shadow-md ${avatar === a ? 'bg-blue-100 border-2 border-blue-400 scale-125 shadow-lg' : 'bg-gray-50'}`}
-                      >
-                        {a}
-                      </button>
-                    ))}
+                {/* Join Card */}
+                <button onClick={() => { setView('JOIN'); setRoomId('') }} className="flex-1 bg-white p-8 rounded-2xl sketch-border shadow-lg hover:scale-105 transition-transform group relative overflow-hidden text-left min-h-[200px] flex flex-col justify-between">
+                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <span className="text-9xl">🚀</span>
                   </div>
-                </div>
-
-                {/* Name & Room ID Row */}
-                <div className="flex flex-col md:flex-row gap-6">
-                  <div className="flex-1">
-                    <label className="block text-lg font-semibold mb-1">Who are you?</label>
-                    <input
-                      className="w-full border-b-2 border-gray-400 p-2 text-xl focus:outline-none focus:border-blue-500 bg-transparent placeholder-gray-400 font-hand"
-                      placeholder="Your Name..."
-                      value={username}
-                      onChange={e => setUsername(e.target.value)}
-                      required
-                    />
+                  <div>
+                    <h2 className="text-3xl font-bold mb-2 group-hover:text-green-600 transition-colors font-hand">Join Room</h2>
+                    <p className="text-gray-500 font-medium">Have a code? Jump into an existing game lobby.</p>
                   </div>
-                  <div className="flex-1">
-                    <label className="block text-lg font-semibold mb-1">Room ID</label>
-                    <input
-                      className="w-full border-b-2 border-gray-400 p-2 text-xl focus:outline-none focus:border-blue-500 bg-transparent placeholder-gray-400 font-hand"
-                      placeholder="e.g. room1"
-                      value={roomId}
-                      onChange={e => setRoomId(e.target.value)}
-                    />
+                  <div className="mt-6 bg-green-100 text-green-600 font-bold py-2 px-4 rounded-lg w-fit group-hover:bg-green-600 group-hover:text-white transition-colors">
+                    Join Game &rarr;
                   </div>
-                </div>
-
-                {/* Game Config Row */}
-                <div className="flex gap-6 bg-gray-50 p-4 rounded-xl border border-gray-200 border-dashed">
-                  <div className="flex-1">
-                    <label className="block text-sm font-bold text-gray-500 mb-1">Rounds</label>
-                    <input type="number" min="1" max="10" value={rounds} onChange={e => setRounds(Number(e.target.value))} className="w-full p-2 bg-white border border-gray-300 rounded-lg font-hand text-lg" />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-bold text-gray-500 mb-1">Time (s)</label>
-                    <input type="number" min="10" max="180" value={drawTime} onChange={e => setDrawTime(Number(e.target.value))} className="w-full p-2 bg-white border border-gray-300 rounded-lg font-hand text-lg" />
-                  </div>
-                </div>
+                </button>
               </div>
+            )}
 
-              <button className="mt-2 bg-gray-800 text-white text-2xl py-4 px-6 rounded-xl sketch-border hover:bg-gray-900 hover:-translate-y-1 transition-transform shadow-lg flex items-center justify-center gap-3 font-bold tracking-wide">
-                Start Drawing <span className="text-3xl">✎</span>
-              </button>
-            </form>
+            {/* VIEW 2 & 3: FORM (CREATE or JOIN) */}
+            {view !== 'LANDING' && (
+              <form onSubmit={handleJoin} className="bg-white p-6 md:p-10 sketch-border max-w-lg w-full flex flex-col gap-6 relative transform shadow-xl animate-fade-in-up">
+
+                {/* Back Button */}
+                <button type="button" onClick={() => setView('LANDING')} className="absolute top-4 left-4 text-gray-400 hover:text-black font-bold text-sm flex items-center gap-1 transition-colors">
+                  &larr; Back
+                </button>
+
+                <h2 className="text-3xl font-bold text-center mb-2 pt-4 border-b-2 border-dashed border-gray-300 pb-2 font-hand">
+                  {view === 'CREATE' ? 'Setup Game' : 'Join Game'}
+                </h2>
+
+                <div className="space-y-6">
+                  {/* Avatar Selection */}
+                  <div className="flex flex-col items-center">
+                    <label className="block text-sm font-bold text-gray-500 mb-2 uppercase tracking-wide">Choose Avatar</label>
+                    <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar max-w-full justify-center w-full px-2">
+                      {AVATARS.map(a => (
+                        <button
+                          key={a}
+                          type="button"
+                          onClick={() => setAvatar(a)}
+                          className={`text-3xl p-2 rounded-xl transition-all hover:scale-110 hover:shadow-md shrink-0 ${avatar === a ? 'bg-blue-100 border-2 border-blue-400 scale-125 shadow-lg' : 'bg-gray-50'}`}
+                        >
+                          {a}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Inputs */}
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-500 mb-1">Your Name</label>
+                      <input
+                        className="w-full border-2 border-gray-200 rounded-lg p-3 text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-hand"
+                        placeholder="e.g. Picasso"
+                        value={username}
+                        onChange={e => setUsername(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-500 mb-1">Room ID</label>
+                      <input
+                        className="w-full border-2 border-gray-200 rounded-lg p-3 text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-bold font-mono tracking-wider text-center uppercase"
+                        placeholder={view === 'CREATE' ? 'Auto-generated' : 'Enter Room ID'}
+                        value={roomId}
+                        onChange={e => setRoomId(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* CREATE ONLY: Config */}
+                  {view === 'CREATE' && (
+                    <div className="flex gap-4 bg-yellow-50 p-4 rounded-xl border border-yellow-200 border-dashed">
+                      <div className="flex-1">
+                        <label className="block text-xs font-bold text-yellow-700 mb-1 uppercase">Rounds</label>
+                        <input type="number" min="1" max="10" value={rounds} onChange={e => setRounds(Number(e.target.value))} className="w-full p-2 bg-white border border-yellow-300 rounded-lg font-bold text-center" />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-bold text-yellow-700 mb-1 uppercase">Draw Time (s)</label>
+                        <input type="number" min="10" max="180" step="10" value={drawTime} onChange={e => setDrawTime(Number(e.target.value))} className="w-full p-2 bg-white border border-yellow-300 rounded-lg font-bold text-center" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <button className={`mt-2 text-white text-xl py-4 px-6 rounded-xl sketch-border hover:-translate-y-1 transition-transform shadow-lg flex items-center justify-center gap-3 font-bold tracking-wide ${view === 'CREATE' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}`}>
+                  {view === 'CREATE' ? 'Create Lobby 🏠' : 'Enter Room 🚪'}
+                </button>
+              </form>
+            )}
+
           </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-4 w-full h-full lg:max-h-[800px] items-stretch animate-fade-in-up flex-1 min-h-0 relative">
@@ -304,7 +355,8 @@ export default function Home() {
 
               {/* Desktop Header */}
               <div className="hidden lg:flex bg-gray-100 p-2 rounded-t-3xl justify-between items-center px-4 border-b z-10 shrink-0">
-                <div className="text-lg flex flex-col">
+                <div className="text-lg flex flex-col leading-tight">
+                  <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Room: {game?.roomId}</span>
                   <span className="text-sm text-gray-500 font-bold">{game?.status === 'LOBBY' ? 'Waiting to Start' : `Round ${game?.currentRound} / ${game?.maxRounds}`}</span>
                   {game?.status === 'DRAWING' && <span className="font-bold text-blue-600 animate-pulse">🎨 {currentDrawerName} is Drawing...</span>}
                 </div>
@@ -320,7 +372,8 @@ export default function Home() {
 
               {/* Mobile Info Bar (Compact) */}
               <div className="lg:hidden bg-gray-50 p-2 border-b flex justify-between items-center shrink-0">
-                <div className="truncate max-w-[200px]">
+                <div className="truncate max-w-[200px] flex flex-col">
+                  <span className="text-[9px] text-gray-400 font-bold uppercase">Room: {game?.roomId}</span>
                   {renderMobileSecretWord()}
                 </div>
                 <div className="flex items-center gap-2">

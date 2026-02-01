@@ -248,18 +248,33 @@ export default function SocketHandler(req: any, res: any) {
                             if (game.timer) clearInterval(game.timer)
                             delete games[roomId]
                             console.log(`Game ${roomId} deleted (empty)`)
+                        } else if (game.status !== 'LOBBY' && game.players.length === 1) {
+                            // Only 1 player remains in active game -> THEY WIN
+                            if (game.timer) clearInterval(game.timer)
+                            game.status = 'ENDED'
+                            const winner = game.players[0]
+                            winner.score += 100 // Bonus for survival
+
+                            io.to(roomId).emit('game-update', getPublicState(game, winner.id))
+                            io.to(roomId).emit('system-message', 'Everyone left! You win by default! 🏆')
+                            io.to(roomId).emit('game-ended', game.players)
                         } else {
                             // Notify others
                             // If drawer left, we might need to reset round or pass turn. 
-                            // For MVP, just update list. If drawer left during drawing, valid point to handle.
                             if (game.status === 'DRAWING' && game.drawerIndex === playerIndex) {
                                 io.to(roomId).emit('system-message', 'Drawer disconnected! Skipping turn...')
                                 nextTurn(io, roomId)
                             } else {
-                                // Adjust drawer index if needed
-                                if (playerIndex < game.drawerIndex) {
-                                    game.drawerIndex--
+                                if (game.drawerIndex >= game.players.length) game.drawerIndex = 0
+
+                                // Host Migration
+                                if (game.hostId === socket.id) {
+                                    game.hostId = game.players[0].id
+                                    io.to(roomId).emit('system-message', `${game.players[0].name} is now the Host! 👑`)
+                                    // We need to re-emit game update so client knows who host is (for Start button)
+                                    game.players.forEach(p => io.to(p.id).emit('game-update', getPublicState(game, p.id)))
                                 }
+
                                 io.to(roomId).emit('game-update', getPublicState(game, game.players[0].id))
                                 io.to(roomId).emit('system-message', `${player.name} left.`)
                             }
