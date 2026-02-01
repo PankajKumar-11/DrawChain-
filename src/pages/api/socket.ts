@@ -49,14 +49,7 @@ const get3Words = () => {
     return Array.from(indices).map(i => WORDS[i])
 }
 
-const nextTurn = (io: Server, roomId: string) => {
-    const game = games[roomId]
-    // ... (rest of function remains via context but we are just replacing get3Words definition mostly, wait replace_file_content needs contiguous)
-    // Actually I will just target get3Words function definition
-    return [...WORDS].sort(() => 0.5 - Math.random()).slice(0, 3)
-}
-// Wait, I can't use "rest of function" in ReplacementContent. 
-// I will target get3Words explicitly.
+
 
 
 const nextTurn = (io: Server, roomId: string) => {
