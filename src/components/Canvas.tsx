@@ -4,6 +4,7 @@ import type { Socket } from 'socket.io-client'
 interface CanvasProps {
     socket: Socket | null
     roomId: string
+    isAllowedToDraw: boolean
 }
 
 const COLORS = [
@@ -12,7 +13,7 @@ const COLORS = [
     '#FFA500', '#800080', '#008000', '#A52A2A'
 ]
 
-export function Canvas({ socket, roomId }: CanvasProps) {
+export function Canvas({ socket, roomId, isAllowedToDraw }: CanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [isDrawing, setIsDrawing] = useState(false)
     const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null)
@@ -236,7 +237,7 @@ export function Canvas({ socket, roomId }: CanvasProps) {
     }
 
     const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-        if (!ctx) return
+        if (!ctx || !isAllowedToDraw) return
         // Prevent scrolling on touch
         if ('touches' in e) {
             // e.preventDefault() // React synthetic event doesn't support passive preventDefault directly in some cases, but touch-action: none handles it.
@@ -258,7 +259,7 @@ export function Canvas({ socket, roomId }: CanvasProps) {
     }
 
     const draw = (e: React.MouseEvent | React.TouchEvent) => {
-        if (!isDrawing || !ctx) return
+        if (!isDrawing || !ctx || !isAllowedToDraw) return
         const { x, y } = getPoint(e)
 
         // Random pitch flutter for realism
@@ -284,7 +285,7 @@ export function Canvas({ socket, roomId }: CanvasProps) {
     }
 
     const clearCanvas = () => {
-        if (!ctx || !canvasRef.current) return
+        if (!ctx || !canvasRef.current || !isAllowedToDraw) return
         ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
         ctx.fillStyle = "white";
         ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
@@ -297,7 +298,7 @@ export function Canvas({ socket, roomId }: CanvasProps) {
                 ref={canvasRef}
                 width={500}
                 height={500}
-                className="sketch-border bg-white cursor-crosshair touch-none w-full h-auto aspect-square max-w-[500px]"
+                className={`sketch-border bg-white cursor-crosshair touch-none w-full h-auto aspect-square max-w-[500px] ${!isAllowedToDraw ? 'pointer-events-none opacity-90' : ''}`}
                 onMouseDown={startDrawing}
                 onMouseMove={draw}
                 onMouseUp={stopDrawing}
@@ -308,7 +309,7 @@ export function Canvas({ socket, roomId }: CanvasProps) {
             />
 
             {/* Compact Toolbar */}
-            <div className="flex gap-1 w-full justify-between px-1 items-center bg-gray-50 rounded-lg p-1 border border-gray-200">
+            <div className={`flex gap-1 w-full justify-between px-1 items-center bg-gray-50 rounded-lg p-1 border border-gray-200 ${!isAllowedToDraw ? 'pointer-events-none opacity-50 grayscale' : ''}`}>
                 {/* Color Swatches */}
                 <div className="flex gap-1 overflow-x-auto max-w-[50%] no-scrollbar items-center px-1">
                     {COLORS.map(c => (

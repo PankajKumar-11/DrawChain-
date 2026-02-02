@@ -69,6 +69,10 @@ const nextTurn = (io: Server, roomId: string) => {
 
     if (game.currentRound > game.maxRounds) {
         game.status = 'ENDED'
+        // FIX: Ensure clients receive the ended state immediately
+        game.players.forEach(p => {
+            io.to(p.id).emit('game-update', getPublicState(game, p.id))
+        })
         io.to(roomId).emit('game-ended', game.players)
         return
     }

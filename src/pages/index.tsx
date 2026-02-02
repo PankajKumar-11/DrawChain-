@@ -27,7 +27,17 @@ interface GameState {
   currentRound: number
   drawTime: number
   // timeLeft is synced separately for performance
+
   hostId: string
+}
+
+const generateRoomId = () => {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  let result = ''
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return result
 }
 
 export default function Home() {
@@ -220,7 +230,7 @@ export default function Home() {
             {view === 'LANDING' && (
               <div className="flex flex-col md:flex-row gap-6 animate-fade-in-up w-full max-w-4xl justify-center items-stretch">
                 {/* Create Card */}
-                <button onClick={() => { setView('CREATE'); setRoomId(`room-${Math.floor(Math.random() * 1000)}`) }} className="flex-1 bg-white p-8 rounded-2xl sketch-border shadow-lg hover:scale-105 transition-transform group relative overflow-hidden text-left min-h-[200px] flex flex-col justify-between">
+                <button onClick={() => { setView('CREATE'); setRoomId(generateRoomId()) }} className="flex-1 bg-white p-8 rounded-2xl sketch-border shadow-lg hover:scale-105 transition-transform group relative overflow-hidden text-left min-h-[200px] flex flex-col justify-between">
                   <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                     <span className="text-9xl">🎨</span>
                   </div>
@@ -470,14 +480,26 @@ export default function Home() {
                         ))}
                       </div>
                     </div>
-                    {game.hostId === socket?.id && (
-                      <button onClick={startGame} className="w-full bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 shadow-md">New Game</button>
+                    {game.hostId === socket?.id ? (
+                      <button onClick={startGame} className="w-full bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 shadow-md transform hover:scale-105 transition-all">Play Again ↻</button>
+                    ) : (
+                      <div className="w-full text-center text-white/80 font-bold animate-pulse">Waiting for host to restart...</div>
                     )}
-                    <button onClick={() => location.reload()} className="bg-blue-500 px-8 py-3 rounded-full font-bold hover:bg-blue-600 shadow-xl transition-transform hover:scale-105">Play Again ↻</button>
+                    <button onClick={() => {
+                      // Reset to Create Mode
+                      if (socket) {
+                        socket.disconnect()
+                        socket.connect() // Reconnect fresh
+                      }
+                      setHasJoined(false)
+                      setGame(null)
+                      setView('CREATE')
+                      setRoomId(generateRoomId())
+                    }} className="bg-blue-500 px-8 py-3 rounded-full font-bold hover:bg-blue-600 shadow-xl transition-transform hover:scale-105 border-2 border-blue-400">New Game 🏠</button>
                   </div>
                 )}
 
-                <Canvas socket={socket} roomId={roomId} />
+                <Canvas socket={socket} roomId={roomId} isAllowedToDraw={!!(isDrawer && game?.status === 'DRAWING')} />
               </div>
             </div>
 
@@ -487,7 +509,7 @@ export default function Home() {
               <div className="w-1/3 bg-white p-2 rounded-lg sketch-border shadow-sm flex flex-col overflow-hidden">
                 <div className="text-xs font-bold border-b pb-1 mb-1 text-center bg-gray-50 flex justify-between items-center px-1">
                   <span>Rankings</span>
-                  {game?.status === 'LOBBY' && game?.hostId === socket?.id && <button onClick={startGame} className="text-[10px] bg-green-500 text-white px-1 rounded hover:bg-green-600">Start</button>}
+                  <button onClick={() => location.reload()} className="text-[10px] text-red-500 border border-red-200 rounded p-1 hover:bg-red-50">Leave</button>
                 </div>
                 <ul className="flex-1 overflow-y-auto space-y-1">
                   {sortedPlayers.map((p, i) => (
@@ -508,7 +530,9 @@ export default function Home() {
                     </li>
                   ))}
                 </ul>
-                <button onClick={() => location.reload()} className="mt-1 text-[10px] text-red-500 border border-red-200 rounded p-1 text-center bg-red-50 hover:bg-red-100">Leave</button>
+                {game?.status === 'LOBBY' && game?.hostId === socket?.id && (
+                  <button onClick={startGame} className="mt-1 text-xs bg-green-500 text-white font-bold py-2 rounded shadow-sm hover:bg-green-600 animate-pulse">Start Game 🚀</button>
+                )}
               </div>
 
               {/* Right: Chat */}
