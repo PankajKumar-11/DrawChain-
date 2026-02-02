@@ -181,12 +181,25 @@ export default function SocketHandler(req: any, res: any) {
             // Check if name is taken? (Optional, but good for clarity)
 
             // Add Player: Idempotent add/update
-            const existingInd = game.players.findIndex(p => p.id === socket.id)
+            // Improved deduplication: Check for ID OR Name match to handle reloads/reconnects
+            let existingInd = game.players.findIndex(p => p.id === socket.id)
+
+            // If not found by ID, check by Name (Session Recovery)
+            if (existingInd === -1) {
+                existingInd = game.players.findIndex(p => p.name === username)
+            }
+
             if (existingInd !== -1) {
-                // Update existing
+                // Update existing player (Reconnect)
+                const oldId = game.players[existingInd].id
                 game.players[existingInd].name = username
-                game.players[existingInd].id = socket.id // Same ID
-                // avatar update?
+                game.players[existingInd].id = socket.id // Update to new Socket ID
+                game.players[existingInd].guessed = false // Reset round state on rejoin? Maybe keep it if same round.
+
+                // If they were host, update hostId
+                if (game.hostId === oldId) {
+                    game.hostId = socket.id
+                }
             } else {
                 game.players.push({
                     id: socket.id,
@@ -264,6 +277,14 @@ export default function SocketHandler(req: any, res: any) {
                 }
             }
             io.to(data.roomId).emit('chat-message', data)
+        })
+
+        // WebRTC Signaling (Generic)
+        socket.on('voice-signal', (data) => {
+            io.to(data.target).emit('voice-signal', {
+                signal: data.signal,
+                sender: socket.id
+            })
         })
 
         socket.on('disconnect', () => {

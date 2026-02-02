@@ -5,6 +5,10 @@ import { useEffect, useState } from 'react'
 import io, { type Socket } from 'socket.io-client'
 
 import FloatingSketchesBackground from '@/components/FloatingSketchesBackground'
+import dynamic from 'next/dynamic'
+
+// Dynamically import VoiceChat to avoid SSR issues with navigator/window
+const VoiceChat = dynamic(() => import('@/components/VoiceChat'), { ssr: false })
 
 const AVATARS = ['🧑‍🎨', '🤖', '🐱', '👽', '🦊', '👾', '🐼', '🐯', '🦁', '🐮', '🐷', '🐸']
 
@@ -59,6 +63,21 @@ export default function Home() {
   // No showPlayers toggle needed for parallel view
 
   const MEMES = ["Big Brain Time! 🧠", "Picasso? 🎨", "Sketch God! ✨", "Too Fast! ⚡", "Sniper! 🎯"]
+
+  // Responsive state to prevent double mounting of VoiceChat
+  const [isDesktop, setIsDesktop] = useState(true);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+
+    // Initial check
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     let newSocket: Socket | null = null;
@@ -223,6 +242,7 @@ export default function Home() {
       )}
 
       <main className="flex flex-col items-center justify-center w-full h-full p-2 md:p-4">
+
         {!hasJoined ? (
           <div className="w-full flex items-center justify-center">
 
@@ -373,6 +393,16 @@ export default function Home() {
                 ))}
               </ul>
 
+              <div className="mt-2 mb-2">
+                {hasJoined && socket && isDesktop && (
+                  <VoiceChat
+                    socket={socket}
+                    roomId={roomId}
+                    players={game?.players || []}
+                    currentUserId={socket.id || ''}
+                  />
+                )}
+              </div>
               {/* Action Buttons */}
               <div className="flex flex-col gap-3 mt-4 shrink-0 pt-4 border-t-2 border-gray-100 border-dashed">
                 {game?.status === 'LOBBY' && game?.hostId === socket?.id ? (
@@ -509,8 +539,21 @@ export default function Home() {
               <div className="w-1/3 bg-white p-2 rounded-lg sketch-border shadow-sm flex flex-col overflow-hidden">
                 <div className="text-xs font-bold border-b pb-1 mb-1 text-center bg-gray-50 flex justify-between items-center px-1">
                   <span>Rankings</span>
-                  <button onClick={() => location.reload()} className="text-[10px] text-red-500 border border-red-200 rounded p-1 hover:bg-red-50">Leave</button>
+                  <button onClick={() => location.reload()} className="text-red-500 hover:bg-red-50 p-1 rounded" title="Leave Game">🚪</button>
                 </div>
+
+                {/* Voice Chat embedded */}
+                {hasJoined && socket && !isDesktop && (
+                  <div className="mb-2">
+                    <VoiceChat
+                      socket={socket}
+                      roomId={roomId}
+                      players={game?.players || []}
+                      currentUserId={socket.id || ''}
+                    />
+                  </div>
+                )}
+
                 <ul className="flex-1 overflow-y-auto space-y-1">
                   {sortedPlayers.map((p, i) => (
                     <li key={p.id} className={`flex flex-col p-1 rounded border text-[10px] ${p.guessed ? 'bg-green-50 border-green-200' : 'bg-white'}`}>
