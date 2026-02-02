@@ -400,6 +400,7 @@ export default function Home() {
                     roomId={roomId}
                     players={game?.players || []}
                     currentUserId={socket.id || ''}
+                    gameStatus={game?.status || 'LOBBY'}
                   />
                 )}
               </div>
@@ -411,8 +412,12 @@ export default function Home() {
                   <div className="text-center text-gray-400 text-sm italic py-2">Waiting for host...</div>
                 )}
 
-                <button onClick={() => location.reload()} className="w-full bg-red-100 text-red-500 py-3 rounded-xl font-bold hover:bg-red-200 text-sm border-2 border-red-200 transition-colors flex items-center justify-center gap-2">
-                  <span>🚪</span> Leave Room
+                <button onClick={() => location.reload()} className="w-full bg-red-100 text-red-600 py-3 rounded-xl font-bold hover:bg-red-200 text-sm border-2 border-red-200 transition-colors flex items-center justify-center gap-2 group">
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 5h7c.552 0 1-.448 1-1s-.448-1-1-1H5c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h7c.552 0 1-.448 1-1s-.448-1-1-1H5V5z" />
+                    <path d="m20.293 11.293-4-4a1 1 0 0 0-1.414 1.414L17.586 11H9c-.552 0-1 .448-1 1s.448 1 1 1h8.586l-2.707 2.293a1 1 0 1 0 1.414 1.414l4-4a1 1 0 0 0 0-1.414z" />
+                  </svg>
+                  Leave Room
                 </button>
               </div>
             </div>
@@ -539,7 +544,12 @@ export default function Home() {
               <div className="w-1/3 bg-white p-2 rounded-lg sketch-border shadow-sm flex flex-col overflow-hidden">
                 <div className="text-xs font-bold border-b pb-1 mb-1 text-center bg-gray-50 flex justify-between items-center px-1">
                   <span>Rankings</span>
-                  <button onClick={() => location.reload()} className="text-red-500 hover:bg-red-50 p-1 rounded" title="Leave Game">🚪</button>
+                  <button onClick={() => location.reload()} className="text-red-500 hover:bg-red-50 p-1 rounded group" title="Leave Game">
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M5 5h7c.552 0 1-.448 1-1s-.448-1-1-1H5c-1.103 0-2 .897-2 2v14c0 1.103.897 2 2 2h7c.552 0 1-.448 1-1s-.448-1-1-1H5V5z" />
+                      <path d="m20.293 11.293-4-4a1 1 0 0 0-1.414 1.414L17.586 11H9c-.552 0-1 .448-1 1s.448 1 1 1h8.586l-2.707 2.293a1 1 0 1 0 1.414 1.414l4-4a1 1 0 0 0 0-1.414z" />
+                    </svg>
+                  </button>
                 </div>
 
                 {/* Voice Chat embedded */}
@@ -550,6 +560,7 @@ export default function Home() {
                       roomId={roomId}
                       players={game?.players || []}
                       currentUserId={socket.id || ''}
+                      gameStatus={game?.status || 'LOBBY'}
                     />
                   </div>
                 )}

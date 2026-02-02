@@ -6,6 +6,7 @@ interface VoiceChatProps {
     roomId: string;
     players: { id: string; name: string }[];
     currentUserId: string;
+    gameStatus: string;
 }
 
 const iceServers = {
@@ -21,23 +22,52 @@ const AudioStreamPlayer = ({ stream, isMuted }: { stream: MediaStream, isMuted: 
     useEffect(() => {
         if (audioRef.current && stream) {
             audioRef.current.srcObject = stream;
+            // Handle play with abort safety
+            const playPromise = audioRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(() => console.log("Audio playing for stream:", stream.id))
+                    .catch(e => {
+                        if (e.name === 'AbortError') {
+                            // Ignore AbortError as it means we interrupted a load (expected during frequent updates)
+                        } else {
+                            console.error("Audio playback failed:", e);
+                        }
+                    });
+            }
         }
     }, [stream]);
 
-    return <audio ref={audioRef} autoPlay playsInline muted={isMuted} />;
+    // Re-trigger play if mute state changes to false
+    useEffect(() => {
+        if (!isMuted && audioRef.current && audioRef.current.paused) {
+            audioRef.current.play().catch(e => console.error("Unmute play failed:", e));
+        }
+    }, [isMuted]);
+
+    return <audio ref={audioRef} autoPlay playsInline muted={isMuted} controls={false} />;
 };
 
-const VoiceChat: React.FC<VoiceChatProps> = ({ socket, roomId, players, currentUserId }) => {
+const VoiceChat: React.FC<VoiceChatProps> = ({ socket, roomId, players, currentUserId, gameStatus }) => {
     const [stream, setStream] = useState<MediaStream | null>(null);
-    const [isMuted, setIsMuted] = useState(false);
+    const [isMuted, setIsMuted] = useState(true); // Default: Microphones OFF on entry
 
     // Visualizer state
     const [isSpeaking, setIsSpeaking] = useState(false);
 
     // Mute features
-    const [isDeafened, setIsDeafened] = useState(false);
+    const [isDeafened, setIsDeafened] = useState(true); // Default: Speakers OFF on entry
     const [mutedPeers, setMutedPeers] = useState<Set<string>>(new Set());
+    // Track remote peers' self-mute state for UI and enforcement
+    const [remoteMuteStates, setRemoteMuteStates] = useState<Map<string, { isMuted: boolean, isDeafened: boolean }>>(new Map());
     const [showSettings, setShowSettings] = useState(false);
+
+    // Broadcast initial Mute/Deafen state on join
+    useEffect(() => {
+        if (socket && roomId) {
+            socket.emit('voice-state-change', { roomId, isMuted: true, isDeafened: true });
+        }
+    }, [socket, roomId]);
 
     const peersRef = useRef<Map<string, RTCPeerConnection>>(new Map());
     // Keep track of who we are connected to, to trigger re-renders
@@ -45,15 +75,18 @@ const VoiceChat: React.FC<VoiceChatProps> = ({ socket, roomId, players, currentU
     const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
 
     useEffect(() => {
-        if (!socket) return;
+        console.log("VoiceChat Init - Socket:", !!socket, "User:", currentUserId);
+        if (!socket || !currentUserId) return;
 
         navigator.mediaDevices.getUserMedia({ video: false, audio: true })
             .then(myStream => {
+                console.log("Mic Stream Acquired:", myStream.id);
                 setStream(myStream);
             })
             .catch(err => console.error("Mic Error:", err));
 
         return () => {
+            console.log("VoiceChat Cleanup");
             stream?.getTracks().forEach(t => t.stop());
             peersRef.current.forEach(pc => pc.close());
             peersRef.current.clear();
@@ -209,10 +242,30 @@ const VoiceChat: React.FC<VoiceChatProps> = ({ socket, roomId, players, currentU
             }
         });
 
-        // Clean up stale peers
+        const handleStateChange = (data: { userId: string, isMuted: boolean, isDeafened: boolean }) => {
+            setRemoteMuteStates(prev => {
+                const newMap = new Map(prev);
+                newMap.set(data.userId, { isMuted: data.isMuted, isDeafened: data.isDeafened });
+                return newMap;
+            });
+        };
+
+        socket.on('voice-state-change', handleStateChange);
+
+        return () => {
+            socket.off('voice-signal', handleSignal);
+            socket.off('voice-state-change', handleStateChange);
+        }
+
+    }, [socket, stream, players, currentUserId]);
+
+    // Dedicated Cleanup Effect: Runs immediately when 'players' list changes
+    useEffect(() => {
         const activeIds = new Set(players.map(p => p.id));
+
         peersRef.current.forEach((pc, id) => {
             if (!activeIds.has(id)) {
+                console.log(`Player ${id} left, cleaning up connection.`);
                 pc.close();
                 peersRef.current.delete(id);
                 setConnectedPeers(prev => prev.filter(pId => pId !== id));
@@ -221,14 +274,14 @@ const VoiceChat: React.FC<VoiceChatProps> = ({ socket, roomId, players, currentU
                     newMap.delete(id);
                     return newMap;
                 });
+                setRemoteMuteStates(prev => {
+                    const newMap = new Map(prev);
+                    newMap.delete(id);
+                    return newMap;
+                });
             }
         });
-
-        return () => {
-            socket.off('voice-signal', handleSignal);
-        }
-
-    }, [socket, stream, players, currentUserId]);
+    }, [players]);
 
     // Reconciliation Loop: Retry connections that might have failed
     useEffect(() => {
@@ -253,7 +306,7 @@ const VoiceChat: React.FC<VoiceChatProps> = ({ socket, roomId, players, currentU
                     }
                 }
             });
-        }, 5000); // Check every 5 seconds
+        }, 2000); // Check every 2 seconds (Aggressive)
 
         return () => clearInterval(interval);
     }, [socket, stream, players, currentUserId]);
@@ -262,7 +315,10 @@ const VoiceChat: React.FC<VoiceChatProps> = ({ socket, roomId, players, currentU
         const pc = new RTCPeerConnection(iceServers);
 
         peersRef.current.set(targetId, pc);
-        setConnectedPeers(prev => [...prev, targetId]);
+        setConnectedPeers(prev => {
+            if (prev.includes(targetId)) return prev;
+            return [...prev, targetId];
+        });
 
         stream?.getTracks().forEach(track => {
             pc.addTrack(track, stream);
@@ -278,6 +334,7 @@ const VoiceChat: React.FC<VoiceChatProps> = ({ socket, roomId, players, currentU
         };
 
         pc.ontrack = (event) => {
+            console.log(`Received track from ${targetId}:`, event.streams[0]?.id);
             if (event.streams && event.streams[0]) {
                 setRemoteStreams(prev => {
                     const newMap = new Map(prev);
@@ -287,8 +344,34 @@ const VoiceChat: React.FC<VoiceChatProps> = ({ socket, roomId, players, currentU
             }
         };
 
+        // Handle ICE connection state changes for auto-recovery
+        pc.oniceconnectionstatechange = () => {
+            console.log(`ICE State ${targetId}: ${pc.iceConnectionState}`);
+            if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+                console.warn(`Connection to ${targetId} failed/disconnected. Removing to trigger retry.`);
+                pc.close();
+                peersRef.current.delete(targetId);
+                setConnectedPeers(prev => prev.filter(id => id !== targetId));
+                setRemoteStreams(prev => {
+                    const newMap = new Map(prev);
+                    newMap.delete(targetId);
+                    return newMap;
+                });
+                // Reconciliation loop will pick this up in < 2s
+            }
+        };
+
         return pc;
     }
+
+    // Auto-Mute/Deafen on Game Start
+    useEffect(() => {
+        if (gameStatus && gameStatus !== 'LOBBY') {
+            // Game Started: Force Mute and Deafen if not already
+            if (!isMuted) toggleMute();
+            if (!isDeafened) toggleDeafen();
+        }
+    }, [gameStatus]);
 
     // Sync Mute State with Stream
     useEffect(() => {
@@ -299,9 +382,17 @@ const VoiceChat: React.FC<VoiceChatProps> = ({ socket, roomId, players, currentU
         }
     }, [stream, isMuted]);
 
-    const toggleMute = () => setIsMuted(prev => !prev);
+    const toggleMute = () => {
+        const newState = !isMuted;
+        setIsMuted(newState);
+        socket?.emit('voice-state-change', { roomId, isMuted: newState, isDeafened });
+    };
 
-    const toggleDeafen = () => setIsDeafened(!isDeafened);
+    const toggleDeafen = () => {
+        const newState = !isDeafened;
+        setIsDeafened(newState);
+        socket?.emit('voice-state-change', { roomId, isMuted, isDeafened: newState });
+    };
 
     const toggleMutePeer = (peerId: string) => {
         setMutedPeers(prev => {
@@ -422,6 +513,9 @@ const VoiceChat: React.FC<VoiceChatProps> = ({ socket, roomId, players, currentU
                                         </div>
                                         <div className="flex flex-col min-w-0">
                                             <span className="text-[10px] font-bold text-gray-700 truncate">{name}</span>
+                                            {remoteMuteStates.get(id)?.isMuted && (
+                                                <span className="text-[8px] text-red-500 font-bold bg-red-50 px-1 rounded-sm w-fit">MUTED</span>
+                                            )}
                                         </div>
                                     </div>
                                     <button
@@ -442,13 +536,15 @@ const VoiceChat: React.FC<VoiceChatProps> = ({ socket, roomId, players, currentU
             )}
 
             {/* Audio Elements (Strictly Filtered) */}
-            {Array.from(remoteStreams.entries()).map(([id, stream]) => (
-                <AudioStreamPlayer
-                    key={id}
-                    stream={stream}
-                    isMuted={isDeafened || mutedPeers.has(id)}
-                />
-            ))}
+            {Array.from(remoteStreams.entries())
+                .filter(([id, s]) => id !== currentUserId && s.id !== stream?.id)
+                .map(([id, stream]) => (
+                    <AudioStreamPlayer
+                        key={id}
+                        stream={stream}
+                        isMuted={isDeafened || mutedPeers.has(id) || (remoteMuteStates.get(id)?.isMuted ?? false)}
+                    />
+                ))}
         </div>
     );
 };

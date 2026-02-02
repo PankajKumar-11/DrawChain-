@@ -287,6 +287,14 @@ export default function SocketHandler(req: any, res: any) {
             })
         })
 
+        socket.on('voice-state-change', (data) => {
+            socket.to(data.roomId).emit('voice-state-change', {
+                userId: socket.id,
+                isMuted: data.isMuted,
+                isDeafened: data.isDeafened
+            })
+        })
+
         socket.on('disconnect', () => {
             for (const roomId in games) {
                 const game = games[roomId]
