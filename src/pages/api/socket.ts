@@ -279,21 +279,7 @@ export default function SocketHandler(req: any, res: any) {
             io.to(data.roomId).emit('chat-message', data)
         })
 
-        // WebRTC Signaling (Generic)
-        socket.on('voice-signal', (data) => {
-            io.to(data.target).emit('voice-signal', {
-                signal: data.signal,
-                sender: socket.id
-            })
-        })
 
-        socket.on('voice-state-change', (data) => {
-            socket.to(data.roomId).emit('voice-state-change', {
-                userId: socket.id,
-                isMuted: data.isMuted,
-                isDeafened: data.isDeafened
-            })
-        })
 
         socket.on('disconnect', () => {
             for (const roomId in games) {

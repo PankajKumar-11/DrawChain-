@@ -7,8 +7,7 @@ import io, { type Socket } from 'socket.io-client'
 import FloatingSketchesBackground from '@/components/FloatingSketchesBackground'
 import dynamic from 'next/dynamic'
 
-// Dynamically import VoiceChat to avoid SSR issues with navigator/window
-const VoiceChat = dynamic(() => import('@/components/VoiceChat'), { ssr: false })
+
 
 const AVATARS = ['🧑‍🎨', '🤖', '🐱', '👽', '🦊', '👾', '🐼', '🐯', '🦁', '🐮', '🐷', '🐸']
 
@@ -64,20 +63,7 @@ export default function Home() {
 
   const MEMES = ["Big Brain Time! 🧠", "Picasso? 🎨", "Sketch God! ✨", "Too Fast! ⚡", "Sniper! 🎯"]
 
-  // Responsive state to prevent double mounting of VoiceChat
-  const [isDesktop, setIsDesktop] = useState(true);
 
-  useEffect(() => {
-    const handleResize = () => {
-      setIsDesktop(window.innerWidth >= 1024);
-    };
-
-    // Initial check
-    handleResize();
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   useEffect(() => {
     let newSocket: Socket | null = null;
@@ -393,17 +379,7 @@ export default function Home() {
                 ))}
               </ul>
 
-              <div className="mt-2 mb-2">
-                {hasJoined && socket && isDesktop && (
-                  <VoiceChat
-                    socket={socket}
-                    roomId={roomId}
-                    players={game?.players || []}
-                    currentUserId={socket.id || ''}
-                    gameStatus={game?.status || 'LOBBY'}
-                  />
-                )}
-              </div>
+
               {/* Action Buttons */}
               <div className="flex flex-col gap-3 mt-4 shrink-0 pt-4 border-t-2 border-gray-100 border-dashed">
                 {game?.status === 'LOBBY' && game?.hostId === socket?.id ? (
@@ -552,18 +528,7 @@ export default function Home() {
                   </button>
                 </div>
 
-                {/* Voice Chat embedded */}
-                {hasJoined && socket && !isDesktop && (
-                  <div className="mb-2">
-                    <VoiceChat
-                      socket={socket}
-                      roomId={roomId}
-                      players={game?.players || []}
-                      currentUserId={socket.id || ''}
-                      gameStatus={game?.status || 'LOBBY'}
-                    />
-                  </div>
-                )}
+
 
                 <ul className="flex-1 overflow-y-auto space-y-1">
                   {sortedPlayers.map((p, i) => (
