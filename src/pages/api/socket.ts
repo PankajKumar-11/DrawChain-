@@ -4,9 +4,11 @@ import { WORDS } from '@/lib/words'
 interface Player {
     id: string
     name: string
+    avatar: string
     score: number
     guessed: boolean
 }
+
 
 interface Game {
     roomId: string
@@ -194,6 +196,7 @@ export default function SocketHandler(req: any, res: any) {
                 const oldId = game.players[existingInd].id
                 game.players[existingInd].name = username
                 game.players[existingInd].id = socket.id // Update to new Socket ID
+                if (avatar) game.players[existingInd].avatar = avatar // Update avatar if provided
                 game.players[existingInd].guessed = false // Reset round state on rejoin? Maybe keep it if same round.
 
                 // If they were host, update hostId
@@ -204,10 +207,12 @@ export default function SocketHandler(req: any, res: any) {
                 game.players.push({
                     id: socket.id,
                     name: username,
+                    avatar: avatar || '🧑‍🎨',
                     score: 0,
                     guessed: false,
                 })
             }
+
 
             // Sync state
             io.to(roomId).emit('game-update', getPublicState(game, socket.id))

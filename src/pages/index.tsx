@@ -9,12 +9,28 @@ import dynamic from 'next/dynamic'
 
 
 
-const AVATARS = ['🧑‍🎨', '🤖', '🐱', '👽', '🦊', '👾', '🐼', '🐯', '🦁', '🐮', '🐷', '🐸']
+const AVATARS = [
+  '/avatars/avatar-01.png',
+  '/avatars/avatar-02.png',
+  '/avatars/avatar-03.png',
+  '/avatars/avatar-04.png',
+  '/avatars/avatar-05.png',
+  '/avatars/avatar-06.png',
+  '/avatars/avatar-07.png',
+  '/avatars/avatar-08.png',
+  '/avatars/avatar-09.png',
+  '/avatars/avatar-10.png',
+  '/avatars/avatar-11.png',
+  '/avatars/avatar-12.png'
+]
+
 
 interface Player {
   id: string
   name: string
+  avatar: string
   score: number
+
   guessed: boolean
 }
 
@@ -282,16 +298,17 @@ export default function Home() {
                   {/* Avatar Selection */}
                   <div className="flex flex-col items-center">
                     <label className="block text-sm font-bold text-gray-500 mb-2 uppercase tracking-wide">Choose Avatar</label>
-                    <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar max-w-full justify-center w-full px-2">
+                    <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar max-w-full w-full px-2">
                       {AVATARS.map(a => (
                         <button
                           key={a}
                           type="button"
                           onClick={() => setAvatar(a)}
-                          className={`text-3xl p-2 rounded-xl transition-all hover:scale-110 hover:shadow-md shrink-0 ${avatar === a ? 'bg-blue-100 border-2 border-blue-400 scale-125 shadow-lg' : 'bg-gray-50'}`}
+                          className={`p-1 rounded-xl transition-all hover:scale-110 hover:shadow-md shrink-0 ${avatar === a ? 'bg-blue-100 border-2 border-blue-400 scale-125 shadow-lg' : 'bg-gray-50'}`}
                         >
-                          {a}
+                          <img src={a} alt="Avatar" className="w-12 h-12 object-contain rendering-pixelated" />
                         </button>
+
                       ))}
                     </div>
                   </div>
@@ -361,8 +378,9 @@ export default function Home() {
                         <div className={`font-mono font-bold text-xs w-5 h-5 flex items-center justify-center rounded-full ${i === 0 ? 'bg-yellow-300 text-yellow-800' : i === 1 ? 'bg-gray-300 text-gray-800' : i === 2 ? 'bg-orange-300 text-orange-900' : 'bg-gray-100 text-gray-500'}`}>
                           #{i + 1}
                         </div>
-                        <span className="text-2xl filter drop-shadow-sm">{AVATARS[(game!.players.indexOf(p)) % AVATARS.length]}</span>
+                        <img src={p.avatar} alt="Avatar" className="w-10 h-10 object-contain rendering-pixelated filter drop-shadow-sm" />
                         <div className="flex flex-col leading-tight">
+
                           <span className="text-base flex items-center gap-2">
                             {p.name}
                             {socket?.id === p.id && <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full border border-blue-200 font-bold">You</span>}
@@ -535,8 +553,9 @@ export default function Home() {
                     <li key={p.id} className={`flex flex-col p-1 rounded border text-[10px] ${p.guessed ? 'bg-green-50 border-green-200' : 'bg-white'}`}>
                       <div className="flex items-center gap-1">
                         <span className={`font-mono text-[9px] w-3 h-3 flex items-center justify-center rounded-full ${i === 0 ? 'bg-yellow-300' : i === 1 ? 'bg-gray-300' : 'bg-gray-100'}`}>#{i + 1}</span>
-                        <span className="text-sm scale-75 origin-left">{AVATARS[(game!.players.indexOf(p)) % AVATARS.length]}</span>
+                        <img src={p.avatar} alt="Avatar" className="w-6 h-6 object-contain rendering-pixelated" />
                         <span className="font-bold truncate flex items-center gap-1">
+
                           {p.name}
                           {socket?.id === p.id && <span className="text-[8px] bg-blue-100 text-blue-600 px-1 rounded">You</span>}
                           {game?.hostId === p.id && <span className="text-[8px] bg-orange-100 text-orange-600 px-1 rounded">🏠</span>}
@@ -572,9 +591,10 @@ export default function Home() {
                 <div className="absolute -right-2 top-10 w-8 h-24 bg-gray-200 rounded-r-md border-l border-gray-300 hidden lg:block"></div>
                 {/* Mobile Chat Header is minimal */}
                 <div className="hidden lg:flex mb-2 items-center gap-2 border-b-2 border-gray-200 pb-2 shrink-0">
-                  <span className="text-2xl">{avatar}</span>
+                  <img src={avatar} alt="Your Avatar" className="w-10 h-10 object-contain rendering-pixelated" />
                   <span className="font-bold text-lg truncate font-hand">{username}</span>
                 </div>
+
 
                 <div className="flex-1 min-h-0 relative text-xs lg:text-base">
                   <Chat
