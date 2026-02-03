@@ -75,6 +75,7 @@ export default function Home() {
   const [game, setGame] = useState<GameState | null>(null)
   const [timeLeft, setTimeLeft] = useState(0)
   const [meme, setMeme] = useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   // No showPlayers toggle needed for parallel view
 
   const MEMES = ["Big Brain Time! 🧠", "Picasso? 🎨", "Sketch God! ✨", "Too Fast! ⚡", "Sniper! 🎯"]
@@ -110,6 +111,10 @@ export default function Home() {
           const randomMeme = MEMES[Math.floor(Math.random() * MEMES.length)]
           setMeme(randomMeme)
           setTimeout(() => setMeme(null), 3000)
+        } else if (msg.includes('Need at least 2 players') || msg.includes('disconnected') || msg.includes('left')) {
+          // Show these as toasts/alerts
+          setErrorMsg(msg)
+          setTimeout(() => setErrorMsg(null), 3000)
         }
       })
 
@@ -468,6 +473,12 @@ export default function Home() {
                 {meme && (
                   <div className="absolute top-10 left-1/2 -translate-x-1/2 z-50 text-2xl md:text-4xl font-extrabold text-yellow-500 animate-pop-in drop-shadow-md pointer-events-none whitespace-nowrap bg-white/80 px-4 py-2 rounded-full sketch-border rotate-12">
                     {meme}
+                  </div>
+                )}
+
+                {errorMsg && (
+                  <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 animate-bounce bg-red-100 text-red-600 border-2 border-red-400 px-6 py-3 rounded-xl font-bold shadow-lg flex items-center gap-2 pointer-events-none">
+                    <span>⚠️</span> {errorMsg}
                   </div>
                 )}
 
