@@ -2,6 +2,8 @@
 
 DrawChain is a real-time multiplayer drawing and guessing game built with **Next.js**, **Socket.io**, and **TailwindCSS**. Gather your friends, create a room, and let the creativity (and chaos) flow!
 
+#### 🚀 **[Play Live Demo](https://drawchain.logiclane.online/)**
+
 ![DrawChain Preview](public/avatars/avatar-01.png) *Note: Add a screenshot of your game here*
 
 ## ✨ Features
