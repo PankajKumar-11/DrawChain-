@@ -4,7 +4,6 @@ DrawChain is a real-time multiplayer drawing and guessing game built with **Next
 
 #### 🚀 **[Play Live Demo](https://drawchain.logiclane.online/)**
 
-#### 🚀 **[Play Live Demo](https://drawchain.logiclane.online/)**
 
 <p align="center">
   <img src="public/screenshots/landing.png" width="45%" alt="Landing Page" />
