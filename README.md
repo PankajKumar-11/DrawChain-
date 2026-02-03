@@ -4,10 +4,20 @@ DrawChain is a real-time multiplayer drawing and guessing game built with **Next
 
 #### 🚀 **[Play Live Demo](https://drawchain.logiclane.online/)**
 
-![DrawChain Preview](public/avatars/avatar-01.png) *Note: Add a screenshot of your game here*
+#### 🚀 **[Play Live Demo](https://drawchain.logiclane.online/)**
+
+<p align="center">
+  <img src="public/screenshots/landing.png" width="45%" alt="Landing Page" />
+  <img src="public/screenshots/gameplay.png" width="45%" alt="Gameplay" />
+</p>
+<p align="center">
+  <img src="public/screenshots/join-game.png" width="45%" alt="Join Game" />
+  <img src="public/screenshots/setup-game.png" width="45%" alt="Setup Game" />
+</p>
 
 ## ✨ Features
 
+- **📱 Fully Mobile Compatible**: Optimized UI for mobile devices so you can draw anywhere!
 - **Real-Time Multiplayer**: Instant drawing synchronization across all clients using Socket.io.
 - **Lobby System**: Create private rooms or join existing ones with a Room ID.
 - **Game Logic**:
@@ -16,13 +26,12 @@ DrawChain is a real-time multiplayer drawing and guessing game built with **Next
     - Timer-based rounds.
     - Real-time scoring and leaderboards.
 - **Tools**:
-    - ✏️ **Pencil**: Standard drawing tool.
+    - ✏️ **Pencil**: Standard drawing tool with **natural audio feedback**.
     - 🧼 **Eraser**: Fix mistakes easily.
     - 🪣 **Fill Bucket**: Fill enclosed areas with color.
     - ↩️ **Undo/Redo**: Full history support to step back and forth.
     - 🗑️ **Clear**: Wipe the canvas.
     - 🎨 **Color Palette**: Vibrant selection of colors.
-- **Mobile Responsive**: Optimized UI for both desktop and mobile devices.
 - **Fun Aesthetics**: "Sketchy" hand-drawn design style.
 
 ## 🛠️ Tech Stack
