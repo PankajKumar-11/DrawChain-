@@ -238,7 +238,7 @@ export default function Home() {
 
       {/* Absolute Header for Title (Desktop Only) */}
       {!hasJoined && (
-        <h1 className="hidden lg:block absolute top-6 left-8 text-4xl font-bold text-gray-800 tracking-wider animate-bounce-slow z-50 font-hand" style={{ textShadow: '2px 2px 0px #ccc' }}>
+        <h1 className="absolute top-6 left-6 lg:left-8 text-2xl lg:text-4xl font-bold text-gray-800 tracking-wider animate-bounce-slow z-50 font-hand" style={{ textShadow: '2px 2px 0px #ccc' }}>
           DrawChain ✏️
         </h1>
       )}
@@ -446,6 +446,7 @@ export default function Home() {
               {/* Mobile Info Bar (Compact) */}
               <div className="lg:hidden bg-gray-50 p-2 border-b flex justify-between items-center shrink-0 text-xs">
                 <div className="flex flex-col gap-1 w-1/3">
+                  <span className="font-bold text-blue-600 font-hand text-sm leading-none mb-0.5">DrawChain ✏️</span>
                   <div className="flex items-center gap-1">
                     <span className="font-bold text-gray-400">Room: {game?.roomId}</span>
                     <button onClick={copyRoomId} className="bg-white border text-gray-500 rounded px-1 shadow-sm active:scale-95">📋</button>

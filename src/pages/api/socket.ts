@@ -254,6 +254,18 @@ export default function SocketHandler(req: any, res: any) {
             socket.to(roomId).emit('clear')
         })
 
+        socket.on('undo', (roomId) => {
+            socket.to(roomId).emit('undo')
+        })
+
+        socket.on('redo', (roomId) => {
+            socket.to(roomId).emit('redo')
+        })
+
+        socket.on('end-draw', (roomId) => {
+            socket.to(roomId).emit('end-draw')
+        })
+
         socket.on('chat-message', (data) => {
             const game = games[data.roomId]
             if (game && game.status === 'DRAWING') {
