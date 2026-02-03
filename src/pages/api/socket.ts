@@ -7,6 +7,8 @@ interface Player {
     avatar: string
     score: number
     guessed: boolean
+    disconnected?: boolean
+    disconnectTimeout?: NodeJS.Timeout
 }
 
 
@@ -133,6 +135,76 @@ const startRound = (io: Server, roomId: string, word: string) => {
     }, 1000)
 }
 
+const handlePlayerRemove = (io: Server, roomId: string, playerId: string) => {
+    const game = games[roomId]
+    if (!game) return
+
+    const playerIndex = game.players.findIndex(p => p.id === playerId)
+    if (playerIndex === -1) return
+
+    const player = game.players[playerIndex]
+    const wasDrawer = playerIndex === game.drawerIndex
+    const wasHost = game.hostId === playerId
+
+    // Remove player
+    game.players.splice(playerIndex, 1)
+
+    // Adjust drawerIndex if needed
+    if (playerIndex < game.drawerIndex) {
+        game.drawerIndex--
+    }
+
+    // Check Game Over or Empty
+    if (game.players.length === 0) {
+        if (game.timer) clearInterval(game.timer)
+        delete games[roomId]
+        console.log(`Game ${roomId} deleted (empty)`)
+    } else if (game.status !== 'LOBBY' && game.players.length < 2) {
+        // Winner
+        if (game.timer) clearInterval(game.timer)
+        game.status = 'ENDED'
+        const winner = game.players[0]
+        winner.score += 100
+        game.hostId = winner.id
+
+        io.to(roomId).emit('game-update', getPublicState(game, winner.id))
+        io.to(roomId).emit('system-message', 'Everyone left! You win! 🏆')
+        io.to(roomId).emit('game-ended', game.players)
+    } else {
+        // Game Continues
+        if (wasHost) {
+            game.hostId = game.players[0].id
+            io.to(roomId).emit('system-message', `${game.players[0].name} is now the Host! 👑`)
+        }
+
+        if (wasDrawer && game.status === 'DRAWING') {
+            io.to(roomId).emit('system-message', 'Drawer disconnected! Skipping turn...')
+            // Decrement index so nextTurn increments it to the *current* slot (which is the next player)
+            game.drawerIndex--
+            nextTurn(io, roomId)
+        } else {
+            // Check if everyone guessed (if only guessers remain)
+            if (game.status === 'DRAWING') {
+                const drawerId = game.players[game.drawerIndex]?.id
+                if (drawerId) {
+                    const guessers = game.players.filter(p => p.id !== drawerId)
+                    if (guessers.length > 0 && guessers.every(p => p.guessed)) {
+                        io.to(roomId).emit('system-message', 'Everyone guessed it!')
+                        nextTurn(io, roomId)
+                    }
+                } else {
+                    nextTurn(io, roomId)
+                }
+            }
+
+            game.players.forEach(p => {
+                io.to(p.id).emit('game-update', getPublicState(game, p.id))
+            })
+            io.to(roomId).emit('system-message', `${player.name} left.`)
+        }
+    }
+}
+
 
 export default function SocketHandler(req: any, res: any) {
     if (!res.socket.server.io) {
@@ -193,16 +265,28 @@ export default function SocketHandler(req: any, res: any) {
 
             if (existingInd !== -1) {
                 // Update existing player (Reconnect)
-                const oldId = game.players[existingInd].id
-                game.players[existingInd].name = username
-                game.players[existingInd].id = socket.id // Update to new Socket ID
-                if (avatar) game.players[existingInd].avatar = avatar // Update avatar if provided
-                game.players[existingInd].guessed = false // Reset round state on rejoin? Maybe keep it if same round.
+                const p = game.players[existingInd]
+
+                // Clear disconnect timeout if exists
+                if (p.disconnectTimeout) {
+                    clearTimeout(p.disconnectTimeout)
+                    p.disconnectTimeout = undefined
+                }
+
+                const oldId = p.id
+                p.name = username
+                p.id = socket.id // Update to new Socket ID
+                p.disconnected = false
+
+                if (avatar) p.avatar = avatar // Update avatar if provided
+                // Keep score and guessed state!
 
                 // If they were host, update hostId
                 if (game.hostId === oldId) {
                     game.hostId = socket.id
                 }
+
+                socket.emit('system-message', 'Welcome back! You reconnected.')
             } else {
                 game.players.push({
                     id: socket.id,
@@ -210,6 +294,7 @@ export default function SocketHandler(req: any, res: any) {
                     avatar: avatar || '🧑‍🎨',
                     score: 0,
                     guessed: false,
+                    disconnected: false
                 })
             }
 
@@ -305,67 +390,21 @@ export default function SocketHandler(req: any, res: any) {
 
                 if (playerIndex !== -1) {
                     const player = game.players[playerIndex]
-                    const wasDrawer = playerIndex === game.drawerIndex
-                    const wasHost = game.hostId === socket.id
+                    player.disconnected = true
 
-                    // Remove player
-                    game.players.splice(playerIndex, 1)
+                    // Notify others of partial disconnect?
+                    game.players.forEach(p => {
+                        if (!p.disconnected) io.to(p.id).emit('game-update', getPublicState(game, p.id))
+                    })
 
-                    // Adjust drawerIndex if needed
-                    if (playerIndex < game.drawerIndex) {
-                        game.drawerIndex--
-                    }
+                    // Give 10 seconds to reconnect
+                    player.disconnectTimeout = setTimeout(() => {
+                        // Check if still disconnected (might have reconnected with new ID, but this object is the old one... 
+                        // Actually, if they reconnected, we updated THIS player object's ID and cleared this timeout. 
+                        // So if this runs, they are gone.)
+                        handlePlayerRemove(io, roomId, player.id) // Use current ID
+                    }, 10000)
 
-                    // Check Game Over or Empty
-                    if (game.players.length === 0) {
-                        if (game.timer) clearInterval(game.timer)
-                        delete games[roomId]
-                        console.log(`Game ${roomId} deleted (empty)`)
-                    } else if (game.status !== 'LOBBY' && game.players.length < 2) {
-                        // Winner
-                        if (game.timer) clearInterval(game.timer)
-                        game.status = 'ENDED'
-                        const winner = game.players[0]
-                        winner.score += 100
-                        game.hostId = winner.id
-
-                        io.to(roomId).emit('game-update', getPublicState(game, winner.id))
-                        io.to(roomId).emit('system-message', 'Everyone left! You win! 🏆')
-                        io.to(roomId).emit('game-ended', game.players)
-                    } else {
-                        // Game Continues
-                        if (wasHost) {
-                            game.hostId = game.players[0].id
-                            io.to(roomId).emit('system-message', `${game.players[0].name} is now the Host! 👑`)
-                        }
-
-                        if (wasDrawer && game.status === 'DRAWING') {
-                            io.to(roomId).emit('system-message', 'Drawer disconnected! Skipping turn...')
-                            // Decrement index so nextTurn increments it to the *current* slot (which is the next player)
-                            game.drawerIndex--
-                            nextTurn(io, roomId)
-                        } else {
-                            // Check if everyone guessed (if only guessers remain)
-                            if (game.status === 'DRAWING') {
-                                const drawerId = game.players[game.drawerIndex]?.id
-                                if (drawerId) {
-                                    const guessers = game.players.filter(p => p.id !== drawerId)
-                                    if (guessers.length > 0 && guessers.every(p => p.guessed)) {
-                                        io.to(roomId).emit('system-message', 'Everyone guessed it!')
-                                        nextTurn(io, roomId)
-                                    }
-                                } else {
-                                    // Should not happen if wasDrawer handled above, but safety
-                                    nextTurn(io, roomId)
-                                }
-                            }
-
-                            game.players.forEach(p => {
-                                io.to(p.id).emit('game-update', getPublicState(game, p.id))
-                            })
-                            io.to(roomId).emit('system-message', `${player.name} left.`)
-                        }
-                    }
                     break
                 }
             }

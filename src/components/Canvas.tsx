@@ -37,8 +37,9 @@ export function Canvas({ socket, roomId, isAllowedToDraw }: CanvasProps) {
 
     // Audio Refs
     const audioContextRef = useRef<AudioContext | null>(null)
-    const oscillatorRef = useRef<OscillatorNode | null>(null)
     const gainNodeRef = useRef<GainNode | null>(null)
+    const noiseBufferRef = useRef<AudioBuffer | null>(null)
+    const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null)
 
     // Current stroke accumulation
     const currentStroke = useRef<Point[]>([])
@@ -62,7 +63,18 @@ export function Canvas({ socket, roomId, isAllowedToDraw }: CanvasProps) {
             context.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+        const AC = new (window.AudioContext || (window as any).webkitAudioContext)()
+        audioContextRef.current = AC
+
+        // Generate Noise Buffer (1 second is enough to loop)
+        const bufferSize = AC.sampleRate * 2; // 2 seconds
+        const buffer = AC.createBuffer(1, bufferSize, AC.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+        noiseBufferRef.current = buffer
+
         return () => { audioContextRef.current?.close() }
     }, [])
 
@@ -74,26 +86,44 @@ export function Canvas({ socket, roomId, isAllowedToDraw }: CanvasProps) {
     }, [color, tool, ctx])
 
     // --- Audio Logic ---
+    // --- Audio Logic ---
     const startAudio = () => {
-        if (!audioContextRef.current) return
+        if (!audioContextRef.current || !noiseBufferRef.current) return
         if (audioContextRef.current.state === 'suspended') audioContextRef.current.resume()
-        const osc = audioContextRef.current.createOscillator()
-        const gain = audioContextRef.current.createGain()
-        osc.type = 'sawtooth'
-        osc.frequency.setValueAtTime(300, audioContextRef.current.currentTime)
-        osc.frequency.linearRampToValueAtTime(500, audioContextRef.current.currentTime + 0.1)
-        gain.gain.setValueAtTime(0.05, audioContextRef.current.currentTime) // Lower volume
-        osc.connect(gain)
-        gain.connect(audioContextRef.current.destination)
-        osc.start()
-        oscillatorRef.current = osc
+
+        const ctx = audioContextRef.current
+
+        // Source
+        const source = ctx.createBufferSource()
+        source.buffer = noiseBufferRef.current
+        source.loop = true
+
+        // Filter (Bandpass to mimic paper friction)
+        const filter = ctx.createBiquadFilter()
+        filter.type = 'bandpass'
+        filter.frequency.value = 1000 // Center freq
+        filter.Q.value = 1.5           // Width of band
+
+        // Gain (Volume)
+        const gain = ctx.createGain()
+        gain.gain.setValueAtTime(0.02, ctx.currentTime) // Low volume start
+
+        // Connect graph
+        source.connect(filter)
+        filter.connect(gain)
+        gain.connect(ctx.destination)
+
+        source.start()
+
+        sourceNodeRef.current = source
         gainNodeRef.current = gain
     }
+
     const stopAudio = () => {
-        if (oscillatorRef.current) {
-            oscillatorRef.current.stop()
-            oscillatorRef.current.disconnect()
-            oscillatorRef.current = null
+        if (sourceNodeRef.current) {
+            sourceNodeRef.current.stop()
+            sourceNodeRef.current.disconnect()
+            sourceNodeRef.current = null
         }
         if (gainNodeRef.current) {
             gainNodeRef.current.disconnect()
@@ -194,10 +224,11 @@ export function Canvas({ socket, roomId, isAllowedToDraw }: CanvasProps) {
         const { x, y } = getPoint(e)
 
         // Audio effect
-        if (oscillatorRef.current && audioContextRef.current) {
-            oscillatorRef.current.frequency.setValueAtTime(
-                400 + Math.random() * 200, audioContextRef.current.currentTime
-            )
+        // Audio effect - Modulate volume slightly based on speed/movement?
+        if (gainNodeRef.current && audioContextRef.current) {
+            // Random small fluctuations to simulate paper texture
+            const now = audioContextRef.current.currentTime
+            gainNodeRef.current.gain.setValueAtTime(0.02 + Math.random() * 0.03, now)
         }
 
         // Local Draw
