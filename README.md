@@ -1,40 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# 🎨 DrawChain
 
-## Getting Started
+DrawChain is a real-time multiplayer drawing and guessing game built with **Next.js**, **Socket.io**, and **TailwindCSS**. Gather your friends, create a room, and let the creativity (and chaos) flow!
 
-First, run the development server:
+![DrawChain Preview](public/avatars/avatar-01.png) *Note: Add a screenshot of your game here*
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## ✨ Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Real-Time Multiplayer**: Instant drawing synchronization across all clients using Socket.io.
+- **Lobby System**: Create private rooms or join existing ones with a Room ID.
+- **Game Logic**:
+    - Turn-based drawing system.
+    - Word selection for the drawer.
+    - Timer-based rounds.
+    - Real-time scoring and leaderboards.
+- **Tools**:
+    - ✏️ **Pencil**: Standard drawing tool.
+    - 🧼 **Eraser**: Fix mistakes easily.
+    - 🪣 **Fill Bucket**: Fill enclosed areas with color.
+    - ↩️ **Undo/Redo**: Full history support to step back and forth.
+    - 🗑️ **Clear**: Wipe the canvas.
+    - 🎨 **Color Palette**: Vibrant selection of colors.
+- **Mobile Responsive**: Optimized UI for both desktop and mobile devices.
+- **Fun Aesthetics**: "Sketchy" hand-drawn design style.
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+## 🛠️ Tech Stack
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+- **Frontend**: [Next.js](https://nextjs.org/) (React), [TailwindCSS](https://tailwindcss.com/)
+- **Backend**: [Node.js](https://nodejs.org/) (Custom Server), [Socket.io](https://socket.io/)
+- **Language**: TypeScript
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
+## 🚀 Getting Started
 
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Follow these steps to run the project locally.
 
-## Learn More
+### Prerequisites
 
-To learn more about Next.js, take a look at the following resources:
+- Node.js (v18 or higher)
+- npm or yarn
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
+### Installation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/PankajKumar-11/DrawChain-.git
+    cd DrawChain-
+    ```
 
-## Deploy on Vercel
+2.  **Install dependencies**:
+    ```bash
+    npm install
+    # or
+    yarn
+    ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3.  **Run the development server**:
+    ```bash
+    npm run dev
+    ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+4.  **Open the app**:
+    Visit [http://localhost:3000](http://localhost:3000) in your browser.
+
+## 🎮 How to Play
+
+1.  **Create a Room**: Click "Create Room" to start a new lobby.
+2.  **Invite Friends**: Share the 6-character **Room ID** with your friends.
+3.  **Start Game**: Once everyone is in, the host clicks "Start Game".
+4.  **Draw & Guess**:
+    - One player is chosen as the **Drawer** and selects a word.
+    - The Drawer draws the word on the canvas.
+    - Other players type their guesses in the chat.
+    - Points are awarded for speed and accuracy!
+5.  **Win**: The player with the most points after all rounds wins!
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1.  Fork the Project
+2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the Branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+---
+Made with ❤️ by [PankajKumar-11](https://github.com/PankajKumar-11)
