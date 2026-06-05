@@ -14,15 +14,15 @@ export const authOptions: NextAuthOptions = {
     providers: [
         ...(process.env.GITHUB_ID && process.env.GITHUB_ID.trim() !== "" && process.env.GITHUB_SECRET && process.env.GITHUB_SECRET.trim() !== "" ? [
             GithubProvider({
-                clientId: process.env.GITHUB_ID,
-                clientSecret: process.env.GITHUB_SECRET,
+                clientId: process.env.GITHUB_ID.trim(),
+                clientSecret: process.env.GITHUB_SECRET.trim(),
                 allowDangerousEmailAccountLinking: true,
             })
         ] : []),
         ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_ID.trim() !== "" && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_CLIENT_SECRET.trim() !== "" ? [
             GoogleProvider({
-                clientId: process.env.GOOGLE_CLIENT_ID,
-                clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+                clientId: process.env.GOOGLE_CLIENT_ID.trim(),
+                clientSecret: process.env.GOOGLE_CLIENT_SECRET.trim(),
                 allowDangerousEmailAccountLinking: true,
             })
         ] : []),
