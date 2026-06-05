@@ -310,45 +310,44 @@ export default function Home() {
         <title>DrawChain - Multiplayer</title>
       </Head>
 
-      {/* Absolute Header for Title (Desktop Only) */}
+      {/* Responsive Header Wrapper */}
       {!hasJoined && (
-        <h1 className="absolute top-6 left-6 lg:left-8 text-2xl lg:text-4xl font-bold text-gray-800 tracking-wider animate-bounce-slow z-50 font-hand" style={{ textShadow: '2px 2px 0px #ccc' }}>
-          DrawChain ✏️
-        </h1>
-      )}
-
-      {/* Landing Header (Top Right controls for Auth / Leaderboard) */}
-      {!hasJoined && (
-        <div className="absolute top-6 right-6 lg:right-8 z-50 flex items-center gap-3 font-hand">
-          <Link href="/leaderboard" className="bg-yellow-100 hover:bg-yellow-200 border-2 border-black px-4 py-2 rounded-xl text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">
-            Leaderboard 🏆
-          </Link>
+        <header className="absolute top-4 sm:top-6 left-4 right-4 sm:left-6 sm:right-6 lg:left-8 lg:right-8 z-50 flex flex-col sm:flex-row justify-between items-center gap-4 font-hand">
+          <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 tracking-wider animate-bounce-slow font-hand" style={{ textShadow: '2px 2px 0px #ccc' }}>
+            DrawChain ✏️
+          </h1>
           
-          {sessionStatus === 'authenticated' ? (
-            <Link href="/profile" className="bg-blue-100 hover:bg-blue-200 border-2 border-black px-4 py-2 rounded-xl text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center gap-2">
-              <span className="text-xl leading-none flex items-center">
-                {avatar && (avatar.startsWith('/') || avatar.startsWith('http')) ? (
-                  <img src={avatar} alt="Avatar" className="w-6 h-6 object-contain rounded-full border border-black" />
-                ) : (
-                  avatar || '🧑‍🎨'
-                )}
-              </span>
-              <span>{username}</span>
+          <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-3">
+            <Link href="/leaderboard" className="bg-yellow-100 hover:bg-yellow-200 border-2 border-black px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm sm:text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">
+              Leaderboard 🏆
             </Link>
-          ) : (
-            <>
-              <button type="button" onClick={() => setAuthModal('LOGIN')} className="bg-white hover:bg-gray-50 border-2 border-black px-4 py-2 rounded-xl text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer">
-                Login 🔑
-              </button>
-              <button type="button" onClick={() => setAuthModal('REGISTER')} className="bg-green-100 hover:bg-green-200 border-2 border-black px-4 py-2 rounded-xl text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer">
-                Sign Up 🚀
-              </button>
-            </>
-          )}
-        </div>
+            
+            {sessionStatus === 'authenticated' ? (
+              <Link href="/profile" className="bg-blue-100 hover:bg-blue-200 border-2 border-black px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm sm:text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center gap-2">
+                <span className="text-lg leading-none flex items-center">
+                  {avatar && (avatar.startsWith('/') || avatar.startsWith('http')) ? (
+                    <img src={avatar} alt="Avatar" className="w-5 h-5 sm:w-6 sm:h-6 object-contain rounded-full border border-black" />
+                  ) : (
+                    avatar || '🧑‍🎨'
+                  )}
+                </span>
+                <span>{username}</span>
+              </Link>
+            ) : (
+              <>
+                <button type="button" onClick={() => setAuthModal('LOGIN')} className="bg-white hover:bg-gray-50 border-2 border-black px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm sm:text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer">
+                  Login 🔑
+                </button>
+                <button type="button" onClick={() => setAuthModal('REGISTER')} className="bg-green-100 hover:bg-green-200 border-2 border-black px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm sm:text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer">
+                  Sign Up 🚀
+                </button>
+              </>
+            )}
+          </div>
+        </header>
       )}
 
-      <main className="flex flex-col items-center justify-center w-full h-full p-2 md:p-4">
+      <main className={`flex flex-col items-center justify-center w-full h-full p-2 md:p-4 ${!hasJoined ? 'pt-40 sm:pt-28 pb-12' : ''}`}>
 
         {!hasJoined ? (
           <div className="w-full flex items-center justify-center">
