@@ -6,6 +6,8 @@ import io, { type Socket } from 'socket.io-client'
 
 import FloatingSketchesBackground from '@/components/FloatingSketchesBackground'
 import dynamic from 'next/dynamic'
+import { useSession, signIn } from 'next-auth/react'
+import Link from 'next/link'
 
 
 
@@ -60,6 +62,8 @@ const generateRoomId = () => {
 }
 
 export default function Home() {
+  const { data: session, status: sessionStatus } = useSession()
+
   const [socket, setSocket] = useState<Socket | null>(null)
   const [roomId, setRoomId] = useState('room1')
   const [username, setUsername] = useState('')
@@ -67,6 +71,69 @@ export default function Home() {
   const [hasJoined, setHasJoined] = useState(false)
 
   const [view, setView] = useState<'LANDING' | 'CREATE' | 'JOIN'>('LANDING')
+
+  // Auth Modals State
+  const [authModal, setAuthModal] = useState<'NONE' | 'LOGIN' | 'REGISTER'>('NONE')
+  const [authEmail, setAuthEmail] = useState('')
+  const [authPassword, setAuthPassword] = useState('')
+  const [authName, setAuthName] = useState('')
+  const [authError, setAuthError] = useState<string | null>(null)
+  const [authLoading, setAuthLoading] = useState(false)
+
+  // Prefill user details if authenticated
+  useEffect(() => {
+    if (sessionStatus === 'authenticated' && session?.user) {
+      if (session.user.name) setUsername(session.user.name)
+      if (session.user.image) setAvatar(session.user.image)
+    }
+  }, [session, sessionStatus])
+
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setAuthLoading(true)
+    setAuthError(null)
+
+    try {
+      if (authModal === 'REGISTER') {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: authName,
+            email: authEmail,
+            password: authPassword,
+            avatar: avatar,
+          }),
+        })
+
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.message || 'Registration failed.')
+
+        // Auto login
+        const result = await signIn('credentials', {
+          redirect: false,
+          email: authEmail,
+          password: authPassword,
+        })
+
+        if (result?.error) throw new Error(result.error)
+        setAuthModal('NONE')
+      } else {
+        const result = await signIn('credentials', {
+          redirect: false,
+          email: authEmail,
+          password: authPassword,
+        })
+
+        if (result?.error) throw new Error(result.error)
+        setAuthModal('NONE')
+      }
+    } catch (err: any) {
+      setAuthError(err.message || 'An error occurred.')
+    } finally {
+      setAuthLoading(false)
+    }
+  }
 
   // Game Config
   const [rounds, setRounds] = useState(3)
@@ -201,7 +268,7 @@ export default function Home() {
         <span className="mr-2 text-sm text-gray-500 font-bold">Guess:</span>
         {game.currentWord.split('').map((char, i) => (
           <span key={i} className="text-xl font-bold font-mono border-b-2 border-black h-6 w-4 flex items-center justify-center mx-0.5" style={{ lineHeight: '100%' }}>
-            {char === ' ' ? '\u00A0' : (game.status === 'ENDED' ? char : '_')}
+            {char === ' ' ? '\u00A0' : (game.status === 'ENDED' || char !== '_' ? char : '_')}
           </span>
         ))}
       </div>
@@ -228,7 +295,9 @@ export default function Home() {
         {game.currentWord.split('').map((char, i) => (
           char === ' ' ?
             <span key={i} className="w-2"></span> :
-            <span key={i} className="text-lg font-bold font-mono border-b-2 border-gray-800 min-w-[12px] text-center leading-none text-transparent select-none relative top-[-2px]">_</span>
+            <span key={i} className={`text-lg font-bold font-mono border-b-2 border-gray-800 min-w-[12px] text-center leading-none relative top-[-2px] ${char === '_' ? 'text-transparent select-none' : 'text-blue-700 font-bold'}`}>
+              {char === '_' ? '_' : char}
+            </span>
         ))}
       </div>
     )
@@ -246,6 +315,31 @@ export default function Home() {
         <h1 className="absolute top-6 left-6 lg:left-8 text-2xl lg:text-4xl font-bold text-gray-800 tracking-wider animate-bounce-slow z-50 font-hand" style={{ textShadow: '2px 2px 0px #ccc' }}>
           DrawChain ✏️
         </h1>
+      )}
+
+      {/* Landing Header (Top Right controls for Auth / Leaderboard) */}
+      {!hasJoined && (
+        <div className="absolute top-6 right-6 lg:right-8 z-50 flex items-center gap-3 font-hand">
+          <Link href="/leaderboard" className="bg-yellow-100 hover:bg-yellow-200 border-2 border-black px-4 py-2 rounded-xl text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">
+            Leaderboard 🏆
+          </Link>
+          
+          {sessionStatus === 'authenticated' ? (
+            <Link href="/profile" className="bg-blue-100 hover:bg-blue-200 border-2 border-black px-4 py-2 rounded-xl text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center gap-2">
+              <span className="text-xl leading-none">{avatar.startsWith('/') ? '🧑‍🎨' : avatar}</span>
+              <span>{username}</span>
+            </Link>
+          ) : (
+            <>
+              <button type="button" onClick={() => setAuthModal('LOGIN')} className="bg-white hover:bg-gray-50 border-2 border-black px-4 py-2 rounded-xl text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer">
+                Login 🔑
+              </button>
+              <button type="button" onClick={() => setAuthModal('REGISTER')} className="bg-green-100 hover:bg-green-200 border-2 border-black px-4 py-2 rounded-xl text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer">
+                Sign Up 🚀
+              </button>
+            </>
+          )}
+        </div>
       )}
 
       <main className="flex flex-col items-center justify-center w-full h-full p-2 md:p-4">
@@ -300,36 +394,62 @@ export default function Home() {
                 </h2>
 
                 <div className="space-y-6">
-                  {/* Avatar Selection */}
-                  <div className="flex flex-col items-center">
-                    <label className="block text-sm font-bold text-gray-500 mb-2 uppercase tracking-wide">Choose Avatar</label>
-                    <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar max-w-full w-full px-2">
-                      {AVATARS.map(a => (
-                        <button
-                          key={a}
-                          type="button"
-                          onClick={() => setAvatar(a)}
-                          className={`p-1 rounded-xl transition-all hover:scale-110 hover:shadow-md shrink-0 ${avatar === a ? 'bg-blue-100 border-2 border-blue-400 scale-125 shadow-lg' : 'bg-gray-50'}`}
-                        >
-                          <img src={a} alt="Avatar" className="w-12 h-12 object-contain rendering-pixelated" />
-                        </button>
-
-                      ))}
+                  {sessionStatus === 'authenticated' ? (
+                    <div className="bg-blue-50/50 p-4 rounded-xl border-2 border-dashed border-blue-200 flex items-center justify-between font-hand mb-2 text-left">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-white p-1 rounded-lg border">
+                          {avatar.startsWith('/') ? (
+                            <img src={avatar} alt="Avatar" className="w-12 h-12 object-contain rendering-pixelated" />
+                          ) : (
+                            <span className="text-3xl">{avatar}</span>
+                          )}
+                        </div>
+                        <div className="flex flex-col leading-tight">
+                          <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Authenticated Artist</span>
+                          <span className="text-xl font-bold text-blue-700">{username}</span>
+                        </div>
+                      </div>
+                      <Link href="/profile" className="text-blue-500 hover:text-blue-700 text-sm font-bold underline">
+                        Stats &rarr;
+                      </Link>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      {/* Avatar Selection */}
+                      <div className="flex flex-col items-center">
+                        <label className="block text-sm font-bold text-gray-500 mb-2 uppercase tracking-wide">Choose Avatar</label>
+                        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar max-w-full w-full px-2">
+                          {AVATARS.map(a => (
+                            <button
+                              key={a}
+                              type="button"
+                              onClick={() => setAvatar(a)}
+                              className={`p-1 rounded-xl transition-all hover:scale-110 hover:shadow-md shrink-0 ${avatar === a ? 'bg-blue-100 border-2 border-blue-400 scale-125 shadow-lg' : 'bg-gray-50'}`}
+                            >
+                              <img src={a} alt="Avatar" className="w-12 h-12 object-contain rendering-pixelated" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-                  {/* Inputs */}
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-bold text-gray-500 mb-1">Your Name</label>
-                      <input
-                        className="w-full border-2 border-gray-200 rounded-lg p-3 text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-hand"
-                        placeholder="e.g. Picasso"
-                        value={username}
-                        onChange={e => setUsername(e.target.value)}
-                        required
-                      />
-                    </div>
+                      {/* Inputs */}
+                      <div className="space-y-4 text-left">
+                        <div>
+                          <label className="block text-sm font-bold text-gray-500 mb-1">Your Name</label>
+                          <input
+                            className="w-full border-2 border-gray-200 rounded-lg p-3 text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-hand"
+                            placeholder="e.g. Picasso"
+                            value={username}
+                            onChange={e => setUsername(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Room ID Input (Always Visible) */}
+                  <div className="space-y-4 text-left">
                     <div>
                       <label className="block text-sm font-bold text-gray-500 mb-1">Room ID</label>
                       <input
@@ -622,6 +742,148 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* Auth Modal Overlay */}
+      {authModal !== 'NONE' && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs font-hand text-left">
+          <div className="bg-white p-6 md:p-8 rounded-3xl border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-sm w-full relative">
+            <button 
+              type="button"
+              onClick={() => { setAuthModal('NONE'); setAuthError(null) }} 
+              className="absolute top-4 right-4 text-gray-500 hover:text-black font-bold text-lg cursor-pointer"
+            >
+              ✕
+            </button>
+
+            <h2 className="text-3xl font-bold text-center border-b-2 border-dashed border-gray-300 pb-2 mb-4">
+              {authModal === 'LOGIN' ? 'Player Login 🔑' : 'Artist Registration 🎨'}
+            </h2>
+
+            {authError && (
+              <div className="bg-red-50 text-red-600 border border-red-200 p-2 rounded-lg text-sm text-center mb-4 font-bold">
+                ⚠️ {authError}
+              </div>
+            )}
+
+            <form onSubmit={handleAuthSubmit} className="space-y-4">
+              {authModal === 'REGISTER' && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-500 mb-1">Username</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full border-2 border-black rounded-lg p-2 text-base focus:outline-none focus:border-blue-500"
+                    placeholder="e.g. Picasso"
+                    value={authName}
+                    onChange={e => setAuthName(e.target.value)}
+                  />
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-sm font-bold text-gray-500 mb-1">Email</label>
+                <input
+                  type="email"
+                  required
+                  className="w-full border-2 border-black rounded-lg p-2 text-base focus:outline-none focus:border-blue-500"
+                  placeholder="e.g. player@drawchain.com"
+                  value={authEmail}
+                  onChange={e => setAuthEmail(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-500 mb-1">Password</label>
+                <input
+                  type="password"
+                  required
+                  className="w-full border-2 border-black rounded-lg p-2 text-base focus:outline-none focus:border-blue-500"
+                  placeholder="••••••••"
+                  value={authPassword}
+                  onChange={e => setAuthPassword(e.target.value)}
+                />
+              </div>
+
+              {authModal === 'REGISTER' && (
+                <div>
+                  <label className="block text-sm font-bold text-gray-500 mb-2 uppercase tracking-wide text-center">Select Starting Avatar</label>
+                  <div className="flex gap-2 overflow-x-auto pb-1 max-w-full justify-center">
+                    {AVATARS.slice(0, 6).map(a => (
+                      <button
+                        key={a}
+                        type="button"
+                        onClick={() => setAvatar(a)}
+                        className={`p-1 rounded-lg shrink-0 border-2 transition-all ${avatar === a ? 'bg-blue-100 border-blue-500 scale-110' : 'bg-gray-50 border-transparent'}`}
+                      >
+                        <img src={a} alt="Avatar" className="w-8 h-8 object-contain rendering-pixelated" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <button 
+                type="submit" 
+                disabled={authLoading}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-px hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-px active:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {authLoading ? 'Signing in... ✏️' : authModal === 'LOGIN' ? 'Login 🚪' : 'Sign Up 🚀'}
+              </button>
+            </form>
+
+            {authModal === 'LOGIN' && (
+              <>
+                <div className="relative flex py-2 items-center my-3">
+                  <div className="flex-grow border-t border-gray-300"></div>
+                  <span className="flex-shrink mx-4 text-gray-400 text-xs font-bold uppercase tracking-wider">or sign in with</span>
+                  <div className="flex-grow border-t border-gray-300"></div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => { setAuthLoading(true); signIn('google') }}
+                    className="flex items-center justify-center gap-2 border-2 border-black bg-white hover:bg-gray-50 text-gray-700 font-bold py-2 px-3 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-px active:shadow-none transition-all cursor-pointer text-sm"
+                  >
+                    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                      <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114A5.99 5.99 0 0 1 8 12.5a5.99 5.99 0 0 1 5.99-6.012c1.49 0 2.845.547 3.899 1.442l3.245-3.244C19.167 2.894 16.792 2 13.99 2 8.197 2 3.5 6.7 3.5 12.5S8.197 23 13.99 23c5.666 0 10.41-3.924 10.41-10.285 0-.583-.056-1.157-.16-1.715H12.24Z" />
+                    </svg>
+                    Google
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAuthLoading(true); signIn('github') }}
+                    className="flex items-center justify-center gap-2 border-2 border-black bg-white hover:bg-gray-50 text-gray-700 font-bold py-2 px-3 rounded-xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-px active:shadow-none transition-all cursor-pointer text-sm"
+                  >
+                    <svg className="w-5 h-5 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2Z" />
+                    </svg>
+                    GitHub
+                  </button>
+                </div>
+              </>
+            )}
+
+            <div className="mt-4 text-center text-sm font-medium">
+              {authModal === 'LOGIN' ? (
+                <p>
+                  New to DrawChain?{' '}
+                  <button type="button" onClick={() => { setAuthModal('REGISTER'); setAuthError(null) }} className="text-blue-600 font-bold underline hover:text-blue-800 cursor-pointer">
+                    Sign Up
+                  </button>
+                </p>
+              ) : (
+                <p>
+                  Already have an account?{' '}
+                  <button type="button" onClick={() => { setAuthModal('LOGIN'); setAuthError(null) }} className="text-blue-600 font-bold underline hover:text-blue-800 cursor-pointer">
+                    Login
+                  </button>
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

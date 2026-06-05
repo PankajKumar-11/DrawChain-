@@ -47,6 +47,10 @@ export function Canvas({ socket, roomId, isAllowedToDraw }: CanvasProps) {
     // Remote stroke accumulation
     const remoteStroke = useRef<{ points: Point[], color: string, width: number } | null>(null)
 
+    // Network Optimization Refs
+    const pendingPoints = useRef<number[]>([])
+    const batchTimer = useRef<NodeJS.Timeout | null>(null)
+
     useEffect(() => {
         const canvas = canvasRef.current
         if (!canvas) return
@@ -75,7 +79,13 @@ export function Canvas({ socket, roomId, isAllowedToDraw }: CanvasProps) {
         }
         noiseBufferRef.current = buffer
 
-        return () => { audioContextRef.current?.close() }
+        return () => {
+            audioContextRef.current?.close()
+            if (batchTimer.current) {
+                clearInterval(batchTimer.current)
+                batchTimer.current = null
+            }
+        }
     }, [])
 
     // Update context style when state changes
@@ -186,6 +196,18 @@ export function Canvas({ socket, roomId, isAllowedToDraw }: CanvasProps) {
         }
     }
 
+    const flushPendingPoints = useCallback(() => {
+        if (pendingPoints.current.length === 0) return
+
+        socket?.emit('draw', {
+            roomId,
+            type: 'draw',
+            points: [...pendingPoints.current],
+            color: tool === 'eraser' ? '#FFFFFF' : color
+        })
+        pendingPoints.current = []
+    }, [socket, roomId, tool, color])
+
     const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
         if (!ctx || !isAllowedToDraw) return
         const { x, y } = getPoint(e)
@@ -204,6 +226,7 @@ export function Canvas({ socket, roomId, isAllowedToDraw }: CanvasProps) {
         // Start Stroke
         setIsDrawing(true)
         currentStroke.current = [{ x, y }]
+        pendingPoints.current = []
 
         ctx.beginPath()
         ctx.moveTo(x, y)
@@ -212,7 +235,8 @@ export function Canvas({ socket, roomId, isAllowedToDraw }: CanvasProps) {
         // Emit start
         socket?.emit('draw', {
             roomId,
-            x, y,
+            x: Math.round(x),
+            y: Math.round(y),
             type: 'start',
             color: tool === 'eraser' ? '#FFFFFF' : color,
             width: tool === 'eraser' ? 20 : 2
@@ -238,13 +262,15 @@ export function Canvas({ socket, roomId, isAllowedToDraw }: CanvasProps) {
         // Accumulate
         currentStroke.current.push({ x, y })
 
-        // Emit
-        socket?.emit('draw', {
-            roomId,
-            x, y,
-            type: 'draw',
-            color: tool === 'eraser' ? '#FFFFFF' : color
-        })
+        // Accumulate for batch socket emission
+        pendingPoints.current.push(Math.round(x), Math.round(y))
+
+        // Start batch timer if not already running
+        if (!batchTimer.current) {
+            batchTimer.current = setInterval(() => {
+                flushPendingPoints()
+            }, 30)
+        }
     }
 
     const stopDrawing = () => {
@@ -253,6 +279,15 @@ export function Canvas({ socket, roomId, isAllowedToDraw }: CanvasProps) {
         ctx.closePath()
         setIsDrawing(false)
         stopAudio()
+
+        // Clear batch timer
+        if (batchTimer.current) {
+            clearInterval(batchTimer.current)
+            batchTimer.current = null
+        }
+
+        // Flush any remaining accumulated coordinates
+        flushPendingPoints()
 
         // Commit to history
         if (currentStroke.current.length > 0) {
@@ -307,25 +342,46 @@ export function Canvas({ socket, roomId, isAllowedToDraw }: CanvasProps) {
     useEffect(() => {
         if (!socket || !ctx) return
 
-        const onDraw = (data: { x: number, y: number, type: 'start' | 'draw', color: string, width?: number }) => {
+        const onDraw = (data: { 
+            x?: number, 
+            y?: number, 
+            type: 'start' | 'draw', 
+            color: string, 
+            width?: number,
+            points?: number[] 
+        }) => {
             const drawWidth = data.width || (data.color === '#FFFFFF' ? 20 : 2)
 
             ctx.strokeStyle = data.color
             ctx.lineWidth = drawWidth
 
             if (data.type === 'start') {
+                const startX = data.x ?? 0
+                const startY = data.y ?? 0
                 ctx.beginPath()
-                ctx.moveTo(data.x, data.y)
+                ctx.moveTo(startX, startY)
                 remoteStroke.current = {
-                    points: [{ x: data.x, y: data.y }],
+                    points: [{ x: startX, y: startY }],
                     color: data.color,
                     width: drawWidth
                 }
             } else {
-                ctx.lineTo(data.x, data.y)
-                ctx.stroke()
-                if (remoteStroke.current) {
-                    remoteStroke.current.points.push({ x: data.x, y: data.y })
+                if (data.points && data.points.length > 0) {
+                    for (let i = 0; i < data.points.length; i += 2) {
+                        const px = data.points[i]
+                        const py = data.points[i + 1]
+                        ctx.lineTo(px, py)
+                        if (remoteStroke.current) {
+                            remoteStroke.current.points.push({ x: px, y: py })
+                        }
+                    }
+                    ctx.stroke()
+                } else if (data.x !== undefined && data.y !== undefined) {
+                    ctx.lineTo(data.x, data.y)
+                    ctx.stroke()
+                    if (remoteStroke.current) {
+                        remoteStroke.current.points.push({ x: data.x, y: data.y })
+                    }
                 }
             }
         }

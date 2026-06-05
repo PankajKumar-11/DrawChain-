@@ -1,51 +1,51 @@
 import { Server, Socket } from 'socket.io'
 import { WORDS } from '@/lib/words'
-
-interface Player {
-    id: string
-    name: string
-    avatar: string
-    score: number
-    guessed: boolean
-    disconnected?: boolean
-    disconnectTimeout?: NodeJS.Timeout
-}
-
-
-interface Game {
-    roomId: string
-    status: 'LOBBY' | 'SELECTING' | 'DRAWING' | 'ENDED'
-    players: Player[]
-    drawerIndex: number
-    currentWord: string
-    wordOptions: string[]
-    maxRounds: number
-    currentRound: number
-    drawTime: number
-    timeLeft: number
-    timer: NodeJS.Timeout | null
-    hostId: string
-}
-
-const games: Record<string, Game> = (global as any).games || {}
-    ; (global as any).games = games
+import { getToken } from 'next-auth/jwt'
+import prisma from '@/lib/prisma'
+import gameStore, { Game, Player } from '@/lib/gameStore'
 
 // Helper to clean game state for public consumption (hiding words)
 const getPublicState = (game: Game, playerId: string) => {
+    const isDrawer = game.players[game.drawerIndex]?.id === playerId
+    const hasGuessed = game.players.find(p => p.id === playerId)?.guessed
+
+    let publicWord = game.currentWord
+    if (game.status === 'DRAWING' && !isDrawer && !hasGuessed) {
+        publicWord = game.hintWord || game.currentWord.replace(/./g, '_')
+    }
+
     return {
         ...game,
-        currentWord: (game.status === 'DRAWING' && playerId !== game.players[game.drawerIndex]?.id && !game.players.find(p => p.id === playerId)?.guessed)
-            ? game.currentWord.replace(/./g, '_ ')
-            : game.currentWord,
-        wordOptions: (game.status === 'SELECTING' && playerId !== game.players[game.drawerIndex]?.id)
+        currentWord: publicWord,
+        wordOptions: (game.status === 'SELECTING' && !isDrawer)
             ? []
             : game.wordOptions,
-        timer: undefined // Don't send timeout obj
     }
 }
 
+// Reveal a random letter in the game hint mask (leaving at least 2 letters unrevealed)
+const revealRandomHint = (game: Game): boolean => {
+    if (!game.hintWord) return false
+    const word = game.currentWord.toLowerCase()
+    
+    const unrevealedIndices: number[] = []
+    for (let i = 0; i < word.length; i++) {
+        if (word[i] !== ' ' && game.hintWord[i] === '_') {
+            unrevealedIndices.push(i)
+        }
+    }
+    
+    if (unrevealedIndices.length > 2) {
+        const randomIndex = unrevealedIndices[Math.floor(Math.random() * unrevealedIndices.length)]
+        const hintArr = game.hintWord.split('')
+        hintArr[randomIndex] = game.currentWord[randomIndex]
+        game.hintWord = hintArr.join('')
+        return true
+    }
+    return false
+}
+
 const get3Words = () => {
-    // Pick 3 unique random indexes
     const indices = new Set<number>()
     while (indices.size < 3 && indices.size < WORDS.length) {
         indices.add(Math.floor(Math.random() * WORDS.length))
@@ -53,14 +53,72 @@ const get3Words = () => {
     return Array.from(indices).map(i => WORDS[i])
 }
 
+const saveGameResults = async (roomId: string, players: Player[]) => {
+    try {
+        if (players.length === 0) return
 
+        let winner: Player | null = null
+        for (const p of players) {
+            if (!winner || p.score > winner.score) {
+                winner = p
+            }
+        }
 
+        await prisma.gameHistory.create({
+            data: {
+                roomId,
+                winnerId: winner?.userId || null,
+                winnerName: winner?.name || null,
+                participants: {
+                    create: players.map(p => ({
+                        userId: p.userId || null,
+                        score: p.score,
+                        name: p.name,
+                    }))
+                }
+            }
+        })
 
-const nextTurn = (io: Server, roomId: string) => {
-    const game = games[roomId]
+        for (const p of players) {
+            if (p.userId) {
+                const isWinner = winner && p.userId === winner.userId
+                const stats = await prisma.userStats.findUnique({
+                    where: { userId: p.userId }
+                })
+                if (stats) {
+                    await prisma.userStats.update({
+                        where: { userId: p.userId },
+                        data: {
+                            gamesPlayed: { increment: 1 },
+                            wins: isWinner ? { increment: 1 } : undefined,
+                            totalPoints: { increment: p.score },
+                            highestScore: Math.max(stats.highestScore, p.score)
+                        }
+                    })
+                } else {
+                    await prisma.userStats.create({
+                        data: {
+                            userId: p.userId,
+                            gamesPlayed: 1,
+                            wins: isWinner ? 1 : 0,
+                            totalPoints: p.score,
+                            highestScore: p.score
+                        }
+                    })
+                }
+            }
+        }
+        console.log(`[Redis] Saved game results for room ${roomId}`)
+    } catch (error) {
+        console.error('saveGameResults failed:', error)
+    }
+}
+
+const nextTurn = async (io: Server, roomId: string) => {
+    const game = await gameStore.getGame(roomId)
     if (!game) return
 
-    if (game.timer) clearInterval(game.timer)
+    gameStore.clearTimer(roomId)
 
     // Clear canvas
     io.to(roomId).emit('clear')
@@ -73,11 +131,16 @@ const nextTurn = (io: Server, roomId: string) => {
 
     if (game.currentRound > game.maxRounds) {
         game.status = 'ENDED'
-        // FIX: Ensure clients receive the ended state immediately
         game.players.forEach(p => {
             io.to(p.id).emit('game-update', getPublicState(game, p.id))
         })
         io.to(roomId).emit('game-ended', game.players)
+
+        await gameStore.setGame(roomId, game)
+
+        saveGameResults(roomId, game.players).catch(err => {
+            console.error('Error saving game results:', err)
+        })
         return
     }
 
@@ -85,58 +148,86 @@ const nextTurn = (io: Server, roomId: string) => {
     game.status = 'SELECTING'
     game.wordOptions = get3Words()
     game.currentWord = ''
-    game.timeLeft = 15 // 15s to select
+    game.timeLeft = 15
     game.players.forEach(p => p.guessed = false)
-
-    const drawer = game.players[game.drawerIndex]
 
     // Broadcast update
     game.players.forEach(p => {
         io.to(p.id).emit('game-update', getPublicState(game, p.id))
     })
 
-    // Timer for selection
-    game.timer = setInterval(() => {
-        game.timeLeft--
-        if (game.timeLeft <= 0) {
-            // Auto select first word
-            startRound(io, roomId, game.wordOptions[0])
+    await gameStore.setGame(roomId, game)
+
+    // Timer for selection (local)
+    const selectionTimer = setInterval(async () => {
+        const g = await gameStore.getGame(roomId)
+        if (!g || g.status !== 'SELECTING') { clearInterval(selectionTimer); return }
+
+        g.timeLeft--
+        if (g.timeLeft <= 0) {
+            clearInterval(selectionTimer)
+            await startRound(io, roomId, g.wordOptions[0])
         } else {
-            io.to(roomId).emit('timer-update', game.timeLeft)
+            await gameStore.setGame(roomId, g)
+            io.to(roomId).emit('timer-update', g.timeLeft)
         }
     }, 1000)
+    gameStore.setTimer(roomId, selectionTimer)
 }
 
-
-const startRound = (io: Server, roomId: string, word: string) => {
-    const game = games[roomId]
+const startRound = async (io: Server, roomId: string, word: string) => {
+    const game = await gameStore.getGame(roomId)
     if (!game) return
-    if (game.timer) clearInterval(game.timer)
+    gameStore.clearTimer(roomId)
 
     game.status = 'DRAWING'
     game.currentWord = word
     game.wordOptions = []
     game.timeLeft = game.drawTime
+    game.hintWord = word.split('').map(char => char === ' ' ? ' ' : '_').join('')
 
-    // Broadcast update
     game.players.forEach(p => {
         io.to(p.id).emit('game-update', getPublicState(game, p.id))
     })
 
     io.to(roomId).emit('system-message', `Drawer has selected a word!`)
 
-    game.timer = setInterval(() => {
-        game.timeLeft--
-        io.to(roomId).emit('timer-update', game.timeLeft)
-        if (game.timeLeft <= 0) {
-            io.to(roomId).emit('system-message', `Time's up! The word was ${game.currentWord}`)
-            nextTurn(io, roomId)
+    await gameStore.setGame(roomId, game)
+
+    const drawTimer = setInterval(async () => {
+        const g = await gameStore.getGame(roomId)
+        if (!g || g.status !== 'DRAWING') { clearInterval(drawTimer); return }
+
+        g.timeLeft--
+        io.to(roomId).emit('timer-update', g.timeLeft)
+
+        const hint1Time = Math.floor(g.drawTime * 0.6)
+        const hint2Time = Math.floor(g.drawTime * 0.3)
+
+        if (g.timeLeft === hint1Time || g.timeLeft === hint2Time) {
+            const revealed = revealRandomHint(g)
+            if (revealed) {
+                io.to(roomId).emit('system-message', '💡 A hint has been revealed!')
+                g.players.forEach(p => {
+                    io.to(p.id).emit('game-update', getPublicState(g, p.id))
+                })
+            }
+        }
+
+        if (g.timeLeft <= 0) {
+            io.to(roomId).emit('system-message', `Time's up! The word was ${g.currentWord}`)
+            clearInterval(drawTimer)
+            await gameStore.setGame(roomId, g)
+            await nextTurn(io, roomId)
+        } else {
+            await gameStore.setGame(roomId, g)
         }
     }, 1000)
+    gameStore.setTimer(roomId, drawTimer)
 }
 
-const handlePlayerRemove = (io: Server, roomId: string, playerId: string) => {
-    const game = games[roomId]
+const handlePlayerRemove = async (io: Server, roomId: string, playerId: string) => {
+    const game = await gameStore.getGame(roomId)
     if (!game) return
 
     const playerIndex = game.players.findIndex(p => p.id === playerId)
@@ -146,22 +237,18 @@ const handlePlayerRemove = (io: Server, roomId: string, playerId: string) => {
     const wasDrawer = playerIndex === game.drawerIndex
     const wasHost = game.hostId === playerId
 
-    // Remove player
     game.players.splice(playerIndex, 1)
 
-    // Adjust drawerIndex if needed
     if (playerIndex < game.drawerIndex) {
         game.drawerIndex--
     }
 
-    // Check Game Over or Empty
     if (game.players.length === 0) {
-        if (game.timer) clearInterval(game.timer)
-        delete games[roomId]
-        console.log(`Game ${roomId} deleted (empty)`)
+        gameStore.clearTimer(roomId)
+        await gameStore.deleteGame(roomId)
+        console.log(`[Redis] Game ${roomId} deleted (empty)`)
     } else if (game.status !== 'LOBBY' && game.players.length < 2) {
-        // Winner
-        if (game.timer) clearInterval(game.timer)
+        gameStore.clearTimer(roomId)
         game.status = 'ENDED'
         const winner = game.players[0]
         winner.score += 100
@@ -170,8 +257,13 @@ const handlePlayerRemove = (io: Server, roomId: string, playerId: string) => {
         io.to(roomId).emit('game-update', getPublicState(game, winner.id))
         io.to(roomId).emit('system-message', 'Everyone left! You win! 🏆')
         io.to(roomId).emit('game-ended', game.players)
+
+        await gameStore.setGame(roomId, game)
+
+        saveGameResults(roomId, game.players).catch(err => {
+            console.error('Error saving game results:', err)
+        })
     } else {
-        // Game Continues
         if (wasHost) {
             game.hostId = game.players[0].id
             io.to(roomId).emit('system-message', `${game.players[0].name} is now the Host! 👑`)
@@ -179,21 +271,24 @@ const handlePlayerRemove = (io: Server, roomId: string, playerId: string) => {
 
         if (wasDrawer && game.status === 'DRAWING') {
             io.to(roomId).emit('system-message', 'Drawer disconnected! Skipping turn...')
-            // Decrement index so nextTurn increments it to the *current* slot (which is the next player)
             game.drawerIndex--
-            nextTurn(io, roomId)
+            await gameStore.setGame(roomId, game)
+            await nextTurn(io, roomId)
         } else {
-            // Check if everyone guessed (if only guessers remain)
             if (game.status === 'DRAWING') {
                 const drawerId = game.players[game.drawerIndex]?.id
                 if (drawerId) {
                     const guessers = game.players.filter(p => p.id !== drawerId)
                     if (guessers.length > 0 && guessers.every(p => p.guessed)) {
                         io.to(roomId).emit('system-message', 'Everyone guessed it!')
-                        nextTurn(io, roomId)
+                        await gameStore.setGame(roomId, game)
+                        await nextTurn(io, roomId)
+                        return
                     }
                 } else {
-                    nextTurn(io, roomId)
+                    await gameStore.setGame(roomId, game)
+                    await nextTurn(io, roomId)
+                    return
                 }
             }
 
@@ -201,6 +296,8 @@ const handlePlayerRemove = (io: Server, roomId: string, playerId: string) => {
                 io.to(p.id).emit('game-update', getPublicState(game, p.id))
             })
             io.to(roomId).emit('system-message', `${player.name} left.`)
+
+            await gameStore.setGame(roomId, game)
         }
     }
 }
@@ -222,15 +319,20 @@ export default function SocketHandler(req: any, res: any) {
 
     const onConnection = (socket: Socket) => {
 
-        socket.on('join-room', ({ roomId, username, config, avatar }) => {
-            socket.join(roomId)
+        socket.on('join-room', async ({ roomId, username, config, avatar }) => {
+            socket.join(roomId);
+            // Track which room this socket is in (needed for disconnect handler)
+            (socket as any)._drawchainRoom = roomId
 
-            let game = games[roomId]
+            let game = await gameStore.getGame(roomId)
             if (!game) {
                 // Check if joining valid room
-                if (!config && !games[roomId]) {
-                    socket.emit('join-error', 'Room not found! Check the ID or Create a new room.')
-                    return
+                if (!config) {
+                    const exists = await gameStore.gameExists(roomId)
+                    if (!exists) {
+                        socket.emit('join-error', 'Room not found! Check the ID or Create a new room.')
+                        return
+                    }
                 }
 
                 game = {
@@ -244,44 +346,52 @@ export default function SocketHandler(req: any, res: any) {
                     currentRound: 1,
                     drawTime: config?.drawTime || 60,
                     timeLeft: 0,
-                    timer: null,
                     hostId: socket.id
                 }
-                games[roomId] = game
             }
 
-            // Sync/Reset player if rejoining with same socket? 
-            // Actually new socket ID every refresh, so we just add.
-            // Check if name is taken? (Optional, but good for clarity)
+            // Resolve auth from session token
+            let authUser: any = null
+            try {
+                const token = await getToken({ 
+                    req: socket.request as any, 
+                    secret: process.env.NEXTAUTH_SECRET || 'drawchain-default-development-secret-key-12345' 
+                })
+                if (token) {
+                    authUser = token
+                }
+            } catch (err) {
+                console.error('Socket auth error:', err)
+            }
 
             // Add Player: Idempotent add/update
-            // Improved deduplication: Check for ID OR Name match to handle reloads/reconnects
             let existingInd = game.players.findIndex(p => p.id === socket.id)
 
-            // If not found by ID, check by Name (Session Recovery)
             if (existingInd === -1) {
-                existingInd = game.players.findIndex(p => p.name === username)
+                if (authUser) {
+                    existingInd = game.players.findIndex(p => p.userId === authUser.id)
+                } else {
+                    existingInd = game.players.findIndex(p => p.name === username && p.isGuest)
+                }
             }
 
             if (existingInd !== -1) {
-                // Update existing player (Reconnect)
                 const p = game.players[existingInd]
 
-                // Clear disconnect timeout if exists
-                if (p.disconnectTimeout) {
-                    clearTimeout(p.disconnectTimeout)
-                    p.disconnectTimeout = undefined
-                }
+                gameStore.clearDisconnectTimer(p.id)
 
                 const oldId = p.id
-                p.name = username
-                p.id = socket.id // Update to new Socket ID
+                p.id = socket.id
                 p.disconnected = false
 
-                if (avatar) p.avatar = avatar // Update avatar if provided
-                // Keep score and guessed state!
+                if (authUser) {
+                    p.name = authUser.name || p.name
+                    p.avatar = authUser.picture || p.avatar
+                } else {
+                    p.name = username || p.name
+                    if (avatar) p.avatar = avatar
+                }
 
-                // If they were host, update hostId
                 if (game.hostId === oldId) {
                     game.hostId = socket.id
                 }
@@ -290,22 +400,25 @@ export default function SocketHandler(req: any, res: any) {
             } else {
                 game.players.push({
                     id: socket.id,
-                    name: username,
-                    avatar: avatar || '🧑‍🎨',
+                    name: authUser ? (authUser.name || username) : username,
+                    avatar: authUser ? (authUser.picture || '🧑‍🎨') : (avatar || '🧑‍🎨'),
                     score: 0,
                     guessed: false,
-                    disconnected: false
+                    disconnected: false,
+                    userId: authUser ? authUser.id : undefined,
+                    isGuest: !authUser
                 })
             }
 
+            await gameStore.setGame(roomId, game)
 
             // Sync state
             io.to(roomId).emit('game-update', getPublicState(game, socket.id))
             game.players.forEach(p => io.to(p.id).emit('game-update', getPublicState(game, p.id)))
         })
 
-        socket.on('start-game', ({ roomId, config }) => {
-            const game = games[roomId]
+        socket.on('start-game', async ({ roomId, config }) => {
+            const game = await gameStore.getGame(roomId)
             if (game) {
                 if (game.players.length < 2) {
                     socket.emit('system-message', 'Need at least 2 players!')
@@ -316,14 +429,15 @@ export default function SocketHandler(req: any, res: any) {
                 game.currentRound = 1
                 game.drawerIndex = -1
                 game.players.forEach(p => { p.score = 0; p.guessed = false })
-                nextTurn(io, roomId)
+                await gameStore.setGame(roomId, game)
+                await nextTurn(io, roomId)
             }
         })
 
-        socket.on('select-word', ({ roomId, word }) => {
-            const game = games[roomId]
+        socket.on('select-word', async ({ roomId, word }) => {
+            const game = await gameStore.getGame(roomId)
             if (game && game.players[game.drawerIndex]?.id === socket.id) {
-                startRound(io, roomId, word)
+                await startRound(io, roomId, word)
             }
         })
 
@@ -351,8 +465,8 @@ export default function SocketHandler(req: any, res: any) {
             socket.to(roomId).emit('end-draw')
         })
 
-        socket.on('chat-message', (data) => {
-            const game = games[data.roomId]
+        socket.on('chat-message', async (data) => {
+            const game = await gameStore.getGame(data.roomId)
             if (game && game.status === 'DRAWING') {
                 if (data.text.trim().toLowerCase() === game.currentWord.toLowerCase()) {
                     const player = game.players.find(p => p.id === socket.id)
@@ -372,7 +486,10 @@ export default function SocketHandler(req: any, res: any) {
                         const guessers = game.players.filter(p => p.id !== drawer.id)
                         if (guessers.every(p => p.guessed)) {
                             io.to(data.roomId).emit('system-message', 'Everyone guessed it!')
-                            nextTurn(io, data.roomId)
+                            await gameStore.setGame(data.roomId, game)
+                            await nextTurn(io, data.roomId)
+                        } else {
+                            await gameStore.setGame(data.roomId, game)
                         }
                         return
                     }
@@ -381,34 +498,35 @@ export default function SocketHandler(req: any, res: any) {
             io.to(data.roomId).emit('chat-message', data)
         })
 
+        socket.on('disconnect', async () => {
+            // Retrieve the room tracked for this socket connection
+            const roomId = (socket as any)._drawchainRoom
+            if (!roomId) return
 
+            const game = await gameStore.getGame(roomId)
+            if (!game) return
 
-        socket.on('disconnect', () => {
-            for (const roomId in games) {
-                const game = games[roomId]
-                const playerIndex = game.players.findIndex(p => p.id === socket.id)
+            const playerIndex = game.players.findIndex(p => p.id === socket.id)
+            if (playerIndex === -1) return
 
-                if (playerIndex !== -1) {
-                    const player = game.players[playerIndex]
-                    player.disconnected = true
+            const player = game.players[playerIndex]
+            player.disconnected = true
 
-                    // Notify others of partial disconnect?
-                    game.players.forEach(p => {
-                        if (!p.disconnected) io.to(p.id).emit('game-update', getPublicState(game, p.id))
-                    })
+            await gameStore.setGame(roomId, game)
 
-                    // Give 10 seconds to reconnect
-                    player.disconnectTimeout = setTimeout(() => {
-                        // Check if still disconnected (might have reconnected with new ID, but this object is the old one... 
-                        // Actually, if they reconnected, we updated THIS player object's ID and cleared this timeout. 
-                        // So if this runs, they are gone.)
-                        handlePlayerRemove(io, roomId, player.id) // Use current ID
-                    }, 10000)
+            // Notify others
+            game.players.forEach(p => {
+                if (!p.disconnected) io.to(p.id).emit('game-update', getPublicState(game, p.id))
+            })
 
-                    break
-                }
-            }
+            // Give 10 seconds to reconnect
+            const disconnectTimer = setTimeout(async () => {
+                await handlePlayerRemove(io, roomId, player.id)
+            }, 10000)
+            gameStore.setDisconnectTimer(socket.id, disconnectTimer)
         })
+
+
     }
 
     io.on('connection', onConnection)
@@ -417,4 +535,3 @@ export default function SocketHandler(req: any, res: any) {
 
     res.end()
 }
-
