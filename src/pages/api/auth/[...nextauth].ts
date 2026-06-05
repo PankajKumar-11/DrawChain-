@@ -116,6 +116,17 @@ export const authOptions: NextAuthOptions = {
             }
         },
     },
+    cookies: {
+        sessionToken: {
+            name: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
+            options: {
+                httpOnly: true,
+                sameSite: 'lax',
+                path: '/',
+                secure: process.env.NODE_ENV === 'production',
+            },
+        },
+    },
     secret: process.env.NEXTAUTH_SECRET || 'drawchain-default-development-secret-key-12345',
     pages: {
         signIn: '/', // Custom sign-in route (handled by modal on landing page)

@@ -326,7 +326,13 @@ export default function Home() {
           
           {sessionStatus === 'authenticated' ? (
             <Link href="/profile" className="bg-blue-100 hover:bg-blue-200 border-2 border-black px-4 py-2 rounded-xl text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center gap-2">
-              <span className="text-xl leading-none">{avatar.startsWith('/') ? '🧑‍🎨' : avatar}</span>
+              <span className="text-xl leading-none flex items-center">
+                {avatar && (avatar.startsWith('/') || avatar.startsWith('http')) ? (
+                  <img src={avatar} alt="Avatar" className="w-6 h-6 object-contain rounded-full border border-black" />
+                ) : (
+                  avatar || '🧑‍🎨'
+                )}
+              </span>
               <span>{username}</span>
             </Link>
           ) : (
@@ -398,10 +404,10 @@ export default function Home() {
                     <div className="bg-blue-50/50 p-4 rounded-xl border-2 border-dashed border-blue-200 flex items-center justify-between font-hand mb-2 text-left">
                       <div className="flex items-center gap-3">
                         <div className="bg-white p-1 rounded-lg border">
-                          {avatar.startsWith('/') ? (
-                            <img src={avatar} alt="Avatar" className="w-12 h-12 object-contain rendering-pixelated" />
+                          {avatar && (avatar.startsWith('/') || avatar.startsWith('http')) ? (
+                            <img src={avatar} alt="Avatar" className="w-12 h-12 object-contain rounded-xl border border-black" />
                           ) : (
-                            <span className="text-3xl">{avatar}</span>
+                            <span className="text-3xl">{avatar || '🧑‍🎨'}</span>
                           )}
                         </div>
                         <div className="flex flex-col leading-tight">

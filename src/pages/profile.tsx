@@ -111,10 +111,10 @@ export default function Profile() {
                             {/* User details card */}
                             <div className="bg-blue-50/50 p-6 rounded-2xl border-2 border-blue-100 flex flex-col items-center justify-center text-center">
                                 <div className="p-2 bg-white rounded-2xl border border-blue-200 shadow-sm mb-3">
-                                    {profile.user.avatar.startsWith('/') ? (
-                                        <img src={profile.user.avatar} alt="Avatar" className="w-20 h-20 object-contain rendering-pixelated" />
+                                    {profile.user.avatar && (profile.user.avatar.startsWith('/') || profile.user.avatar.startsWith('http')) ? (
+                                        <img src={profile.user.avatar} alt="Avatar" className="w-20 h-20 object-contain rounded-2xl border border-blue-200" />
                                     ) : (
-                                        <span className="text-6xl">{profile.user.avatar}</span>
+                                        <span className="text-6xl">{profile.user.avatar || '🧑‍🎨'}</span>
                                     )}
                                 </div>
                                 <h2 className="text-2xl font-bold font-hand text-gray-800">{profile.user.name}</h2>
