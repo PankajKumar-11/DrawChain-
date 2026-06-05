@@ -312,34 +312,34 @@ export default function Home() {
 
       {/* Responsive Header Wrapper */}
       {!hasJoined && (
-        <header className="absolute top-4 sm:top-6 left-4 right-4 sm:left-6 sm:right-6 lg:left-8 lg:right-8 z-50 flex flex-col sm:flex-row justify-between items-center gap-4 font-hand">
-          <h1 className="text-3xl lg:text-4xl font-bold text-gray-800 tracking-wider animate-bounce-slow font-hand" style={{ textShadow: '2px 2px 0px #ccc' }}>
+        <header className="absolute top-3 sm:top-6 left-3 right-3 sm:left-6 sm:right-6 lg:left-8 lg:right-8 z-50 flex flex-row justify-between items-center gap-2 font-hand">
+          <h1 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800 tracking-wider animate-bounce-slow font-hand shrink-0" style={{ textShadow: '1.5px 1.5px 0px #ccc' }}>
             DrawChain ✏️
           </h1>
           
-          <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-3">
-            <Link href="/leaderboard" className="bg-yellow-100 hover:bg-yellow-200 border-2 border-black px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm sm:text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all">
-              Leaderboard 🏆
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Link href="/leaderboard" className="bg-yellow-100 hover:bg-yellow-200 border-2 border-black px-2 py-0.5 rounded-md text-[10px] sm:px-4 sm:py-2 sm:rounded-xl sm:text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all whitespace-nowrap">
+              <span className="hidden sm:inline">Leaderboard</span> 🏆
             </Link>
             
             {sessionStatus === 'authenticated' ? (
-              <Link href="/profile" className="bg-blue-100 hover:bg-blue-200 border-2 border-black px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm sm:text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center gap-2">
-                <span className="text-lg leading-none flex items-center">
+              <Link href="/profile" className="bg-blue-100 hover:bg-blue-200 border-2 border-black px-2 py-0.5 rounded-md text-[10px] sm:px-4 sm:py-2 sm:rounded-xl sm:text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all flex items-center gap-1 sm:gap-2 whitespace-nowrap">
+                <span className="leading-none flex items-center">
                   {avatar && (avatar.startsWith('/') || avatar.startsWith('http')) ? (
-                    <img src={avatar} alt="Avatar" className="w-5 h-5 sm:w-6 sm:h-6 object-contain rounded-full border border-black" />
+                    <img src={avatar} alt="Avatar" className="w-4 h-4 sm:w-6 sm:h-6 object-contain rounded-full border border-black" />
                   ) : (
                     avatar || '🧑‍🎨'
                   )}
                 </span>
-                <span>{username}</span>
+                <span className="hidden sm:inline">{username}</span>
               </Link>
             ) : (
               <>
-                <button type="button" onClick={() => setAuthModal('LOGIN')} className="bg-white hover:bg-gray-50 border-2 border-black px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm sm:text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer">
+                <button type="button" onClick={() => setAuthModal('LOGIN')} className="bg-white hover:bg-gray-50 border-2 border-black px-2 py-0.5 rounded-md text-[10px] sm:px-4 sm:py-2 sm:rounded-xl sm:text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer whitespace-nowrap">
                   Login 🔑
                 </button>
-                <button type="button" onClick={() => setAuthModal('REGISTER')} className="bg-green-100 hover:bg-green-200 border-2 border-black px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-sm sm:text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer">
-                  Sign Up 🚀
+                <button type="button" onClick={() => setAuthModal('REGISTER')} className="bg-green-100 hover:bg-green-200 border-2 border-black px-2 py-0.5 rounded-md text-[10px] sm:px-4 sm:py-2 sm:rounded-xl sm:text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer whitespace-nowrap">
+                  <span className="hidden sm:inline">Sign Up</span><span className="sm:hidden">Join</span> 🚀
                 </button>
               </>
             )}
@@ -347,38 +347,38 @@ export default function Home() {
         </header>
       )}
 
-      <main className={`flex flex-col items-center justify-center w-full h-full p-2 md:p-4 ${!hasJoined ? 'pt-40 sm:pt-28 pb-12' : ''}`}>
+      <main className={`flex flex-col items-center justify-center w-full h-full p-2 md:p-4 ${!hasJoined ? 'pt-16 sm:pt-28 pb-8 sm:pb-12' : ''}`}>
 
         {!hasJoined ? (
           <div className="w-full flex items-center justify-center">
 
             {/* VIEW 1: LANDING SELECTION */}
             {view === 'LANDING' && (
-              <div className="flex flex-col md:flex-row gap-6 animate-fade-in-up w-full max-w-4xl justify-center items-stretch">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 animate-fade-in-up w-full max-w-4xl justify-center items-stretch px-1">
                 {/* Create Card */}
-                <button onClick={() => { setView('CREATE'); setRoomId(generateRoomId()) }} className="flex-1 bg-white p-8 rounded-2xl sketch-border shadow-lg hover:scale-105 transition-transform group relative overflow-hidden text-left min-h-[200px] flex flex-col justify-between">
-                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <span className="text-9xl">🎨</span>
+                <button onClick={() => { setView('CREATE'); setRoomId(generateRoomId()) }} className="flex-1 bg-white p-5 sm:p-8 rounded-2xl sketch-border shadow-lg hover:scale-[1.02] sm:hover:scale-105 transition-transform group relative overflow-hidden text-left min-h-[140px] sm:min-h-[200px] flex flex-col justify-between">
+                  <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <span className="text-6xl sm:text-9xl">🎨</span>
                   </div>
                   <div>
-                    <h2 className="text-3xl font-bold mb-2 group-hover:text-blue-600 transition-colors font-hand">Create Room</h2>
-                    <p className="text-gray-500 font-medium">Host a new game, set the rules, and invite friends.</p>
+                    <h2 className="text-xl sm:text-3xl font-bold mb-1 sm:mb-2 group-hover:text-blue-600 transition-colors font-hand">Create Room</h2>
+                    <p className="text-gray-500 font-medium text-sm sm:text-base">Host a new game, set the rules, and invite friends.</p>
                   </div>
-                  <div className="mt-6 bg-blue-100 text-blue-600 font-bold py-2 px-4 rounded-lg w-fit group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  <div className="mt-3 sm:mt-6 bg-blue-100 text-blue-600 font-bold py-1.5 px-3 sm:py-2 sm:px-4 rounded-lg w-fit group-hover:bg-blue-600 group-hover:text-white transition-colors text-sm sm:text-base">
                     Start Hosting &rarr;
                   </div>
                 </button>
 
                 {/* Join Card */}
-                <button onClick={() => { setView('JOIN'); setRoomId('') }} className="flex-1 bg-white p-8 rounded-2xl sketch-border shadow-lg hover:scale-105 transition-transform group relative overflow-hidden text-left min-h-[200px] flex flex-col justify-between">
-                  <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <span className="text-9xl">🚀</span>
+                <button onClick={() => { setView('JOIN'); setRoomId('') }} className="flex-1 bg-white p-5 sm:p-8 rounded-2xl sketch-border shadow-lg hover:scale-[1.02] sm:hover:scale-105 transition-transform group relative overflow-hidden text-left min-h-[140px] sm:min-h-[200px] flex flex-col justify-between">
+                  <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <span className="text-6xl sm:text-9xl">🚀</span>
                   </div>
                   <div>
-                    <h2 className="text-3xl font-bold mb-2 group-hover:text-green-600 transition-colors font-hand">Join Room</h2>
-                    <p className="text-gray-500 font-medium">Have a code? Jump into an existing game lobby.</p>
+                    <h2 className="text-xl sm:text-3xl font-bold mb-1 sm:mb-2 group-hover:text-green-600 transition-colors font-hand">Join Room</h2>
+                    <p className="text-gray-500 font-medium text-sm sm:text-base">Have a code? Jump into an existing game lobby.</p>
                   </div>
-                  <div className="mt-6 bg-green-100 text-green-600 font-bold py-2 px-4 rounded-lg w-fit group-hover:bg-green-600 group-hover:text-white transition-colors">
+                  <div className="mt-3 sm:mt-6 bg-green-100 text-green-600 font-bold py-1.5 px-3 sm:py-2 sm:px-4 rounded-lg w-fit group-hover:bg-green-600 group-hover:text-white transition-colors text-sm sm:text-base">
                     Join Game &rarr;
                   </div>
                 </button>
@@ -387,7 +387,7 @@ export default function Home() {
 
             {/* VIEW 2 & 3: FORM (CREATE or JOIN) */}
             {view !== 'LANDING' && (
-              <form onSubmit={handleJoin} className="bg-white p-6 md:p-10 sketch-border max-w-lg w-full flex flex-col gap-6 relative transform shadow-xl animate-fade-in-up">
+              <form onSubmit={handleJoin} className="bg-white p-4 sm:p-6 md:p-10 sketch-border max-w-lg w-full flex flex-col gap-4 sm:gap-6 relative transform shadow-xl animate-fade-in-up mx-1">
 
                 {/* Back Button */}
                 <button type="button" onClick={() => setView('LANDING')} className="absolute top-4 left-4 text-gray-400 hover:text-black font-bold text-sm flex items-center gap-1 transition-colors">
@@ -662,33 +662,33 @@ export default function Home() {
             </div>
 
             {/* 2. Mobile Layout (Visible only on screens below lg) */}
-            <div className="flex flex-col lg:hidden gap-3 w-full h-full overflow-y-auto no-scrollbar pb-6 px-1">
+            <div className="flex flex-col lg:hidden gap-2 sm:gap-3 w-full h-full overflow-y-auto no-scrollbar pb-6 px-0.5 sm:px-1">
               {/* Header Bar */}
-              <div className="bg-white p-3 rounded-2xl sketch-border shadow-md flex justify-between items-center text-sm shrink-0">
-                <div className="flex flex-col leading-tight">
-                  <span className="font-bold text-blue-600 font-hand text-base">DrawChain ✏️</span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+              <div className="bg-white p-2 sm:p-3 rounded-xl sm:rounded-2xl sketch-border shadow-md flex justify-between items-center text-xs sm:text-sm shrink-0 gap-1">
+                <div className="flex flex-col leading-tight shrink-0">
+                  <span className="font-bold text-blue-600 font-hand text-sm sm:text-base">DrawChain ✏️</span>
+                  <div className="flex items-center gap-0.5">
+                    <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                       Room: {game?.roomId}
                     </span>
-                    <button onClick={copyRoomId} className="bg-white border text-gray-500 rounded px-1 text-[10px] shadow-sm active:scale-95">📋</button>
+                    <button onClick={copyRoomId} className="bg-white border text-gray-500 rounded px-0.5 text-[9px] sm:text-[10px] shadow-sm active:scale-95">📋</button>
                   </div>
                 </div>
-                <div className="flex flex-col items-center leading-tight">
-                  <span className="font-bold text-gray-700 text-xs">
-                    {game?.status === 'LOBBY' ? 'Lobby' : `Round ${game?.currentRound}/${game?.maxRounds}`}
+                <div className="flex flex-col items-center leading-tight shrink-0">
+                  <span className="font-bold text-gray-700 text-[10px] sm:text-xs">
+                    {game?.status === 'LOBBY' ? 'Lobby' : `R${game?.currentRound}/${game?.maxRounds}`}
                   </span>
                   {game?.status !== 'LOBBY' && (
-                    <span className="text-xs font-mono font-bold text-red-500 animate-pulse mt-0.5">{timeLeft}s</span>
+                    <span className="text-[10px] sm:text-xs font-mono font-bold text-red-500 animate-pulse mt-0.5">{timeLeft}s</span>
                   )}
                 </div>
-                <div className="text-sm font-bold uppercase">
+                <div className="text-xs sm:text-sm font-bold uppercase min-w-0 truncate">
                   {renderMobileSecretWord()}
                 </div>
               </div>
 
               {/* Canvas Card */}
-              <div className="bg-white p-2 rounded-2xl sketch-border shadow-md flex flex-col items-center justify-center relative overflow-hidden shrink-0">
+              <div className="bg-white p-1.5 sm:p-2 rounded-xl sm:rounded-2xl sketch-border shadow-md flex flex-col items-center justify-center relative overflow-hidden shrink-0">
                 {meme && (
                   <div className="absolute top-10 left-1/2 -translate-x-1/2 z-50 text-2xl font-extrabold text-yellow-500 animate-pop-in drop-shadow-md pointer-events-none whitespace-nowrap bg-white/80 px-4 py-2 rounded-full sketch-border rotate-12">
                     {meme}
@@ -761,7 +761,7 @@ export default function Home() {
               </div>
 
               {/* Horizontal Player Rankings Strip */}
-              <div className="bg-white p-2 rounded-2xl sketch-border shadow-md shrink-0 flex flex-col gap-1.5">
+              <div className="bg-white p-1.5 sm:p-2 rounded-xl sm:rounded-2xl sketch-border shadow-md shrink-0 flex flex-col gap-1">
                 <div className="flex justify-between items-center border-b pb-1 text-xs px-1 font-hand">
                   <span className="font-bold text-gray-500">Standings 🏆</span>
                   <div className="flex gap-2">
@@ -776,32 +776,32 @@ export default function Home() {
                   </div>
                 </div>
                 
-                <div className="flex gap-2 overflow-x-auto no-scrollbar py-1 px-1">
+                <div className="flex gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 px-0.5">
                   {sortedPlayers.map((p, i) => (
                     <div 
                       key={p.id} 
-                      className={`flex items-center gap-1.5 p-1.5 rounded-xl border-2 shrink-0 min-w-[120px] transition-all
+                      className={`flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 rounded-lg sm:rounded-xl border-2 shrink-0 min-w-[100px] sm:min-w-[120px] transition-all
                         ${p.guessed ? 'bg-green-50 border-green-200 shadow-sm' : 'bg-white border-gray-100 hover:border-blue-100'}`}
                     >
-                      <div className={`font-mono font-bold text-[9px] w-4 h-4 flex items-center justify-center rounded-full shrink-0
+                      <div className={`font-mono font-bold text-[8px] sm:text-[9px] w-3.5 h-3.5 sm:w-4 sm:h-4 flex items-center justify-center rounded-full shrink-0
                         ${i === 0 ? 'bg-yellow-300 text-yellow-800' : i === 1 ? 'bg-gray-300 text-gray-800' : 'bg-gray-100 text-gray-500'}`}>
                         {i + 1}
                       </div>
-                      <img src={p.avatar} alt="Avatar" className="w-8 h-8 object-contain rendering-pixelated shrink-0" />
+                      <img src={p.avatar} alt="Avatar" className="w-6 h-6 sm:w-8 sm:h-8 object-contain rendering-pixelated shrink-0" />
                       <div className="flex flex-col leading-tight min-w-0 flex-1 font-hand">
-                        <span className="text-xs font-bold truncate">
+                        <span className="text-[10px] sm:text-xs font-bold truncate">
                           {p.name}
                         </span>
-                        <span className="text-[10px] font-mono text-gray-500 font-bold">{p.score} pts</span>
+                        <span className="text-[9px] sm:text-[10px] font-mono text-gray-500 font-bold">{p.score} pts</span>
                       </div>
-                      {p.guessed && <span className="text-green-600 font-bold text-xs shrink-0">✓</span>}
+                      {p.guessed && <span className="text-green-600 font-bold text-[10px] sm:text-xs shrink-0">✓</span>}
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Chat Box (Full width) */}
-              <div className="bg-white p-2 rounded-2xl sketch-border shadow-md flex-1 min-h-[220px] flex flex-col relative">
+              <div className="bg-white p-1.5 sm:p-2 rounded-xl sm:rounded-2xl sketch-border shadow-md flex-1 min-h-[180px] sm:min-h-[220px] flex flex-col relative">
                 <Chat
                   socket={socket}
                   roomId={roomId}
@@ -817,8 +817,8 @@ export default function Home() {
 
       {/* Auth Modal Overlay */}
       {authModal !== 'NONE' && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs font-hand text-left">
-          <div className="bg-white p-6 md:p-8 rounded-3xl border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-sm w-full relative">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-xs font-hand text-left">
+          <div className="bg-white p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl border-3 sm:border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-w-sm w-full relative max-h-[90vh] overflow-y-auto no-scrollbar">
             <button 
               type="button"
               onClick={() => { setAuthModal('NONE'); setAuthError(null) }} 
@@ -827,7 +827,7 @@ export default function Home() {
               ✕
             </button>
 
-            <h2 className="text-3xl font-bold text-center border-b-2 border-dashed border-gray-300 pb-2 mb-4">
+            <h2 className="text-xl sm:text-3xl font-bold text-center border-b-2 border-dashed border-gray-300 pb-2 mb-3 sm:mb-4">
               {authModal === 'LOGIN' ? 'Player Login 🔑' : 'Artist Registration 🎨'}
             </h2>
 

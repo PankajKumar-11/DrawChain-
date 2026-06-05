@@ -49,18 +49,18 @@ export default function Leaderboard() {
                 <title>Leaderboard - DrawChain</title>
             </Head>
 
-            <main className="w-full max-w-4xl p-4 md:p-8 z-10 flex flex-col items-center h-full max-h-[90vh]">
-                <div className="bg-white p-6 md:p-8 rounded-3xl sketch-border shadow-2xl w-full flex flex-col min-h-0 overflow-hidden relative">
+            <main className="w-full max-w-4xl p-2 sm:p-4 md:p-8 z-10 flex flex-col items-center h-full max-h-[90vh]">
+                <div className="bg-white p-3 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl sketch-border shadow-2xl w-full flex flex-col min-h-0 overflow-hidden relative">
                     
                     {/* Header */}
-                    <div className="flex justify-between items-center border-b-2 border-dashed border-gray-300 pb-4 mb-6 shrink-0">
-                        <Link href="/" className="text-gray-500 hover:text-black font-bold text-sm flex items-center gap-1 transition-colors">
+                    <div className="flex justify-between items-center border-b-2 border-dashed border-gray-300 pb-2 sm:pb-4 mb-3 sm:mb-6 shrink-0">
+                        <Link href="/" className="text-gray-500 hover:text-black font-bold text-xs sm:text-sm flex items-center gap-1 transition-colors">
                             &larr; Home
                         </Link>
-                        <h1 className="text-3xl md:text-4xl font-bold font-hand text-center tracking-wider text-gray-800">
-                            Global Leaderboard 🏆
+                        <h1 className="text-lg sm:text-3xl md:text-4xl font-bold font-hand text-center tracking-wider text-gray-800">
+                            <span className="hidden sm:inline">Global </span>Leaderboard 🏆
                         </h1>
-                        <div className="w-12"></div> {/* spacer */}
+                        <div className="w-8 sm:w-12"></div> {/* spacer */}
                     </div>
 
                     {/* Content Section */}
@@ -80,20 +80,20 @@ export default function Leaderboard() {
                         </div>
                     ) : (
                         <div className="flex-1 overflow-y-auto pr-1 no-scrollbar md:block">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left font-hand border-collapse">
+                            <div className="overflow-x-auto -mx-1">
+                                <table className="w-full text-left font-hand border-collapse min-w-[500px]">
                                     <thead>
-                                        <tr className="border-b-2 border-black text-gray-500 uppercase tracking-wider text-sm md:text-base">
-                                            <th className="py-3 px-4">Rank</th>
-                                            <th className="py-3 px-4">Player</th>
-                                            <th className="py-3 px-4 text-center">Played</th>
-                                            <th className="py-3 px-4 text-center">Wins</th>
-                                            <th className="py-3 px-4 text-center">Win Rate</th>
-                                            <th className="py-3 px-4 text-right">High Score</th>
-                                            <th className="py-3 px-4 text-right">Total Score</th>
+                                        <tr className="border-b-2 border-black text-gray-500 uppercase tracking-wider text-[10px] sm:text-sm md:text-base">
+                                            <th className="py-2 sm:py-3 px-2 sm:px-4">Rank</th>
+                                            <th className="py-2 sm:py-3 px-2 sm:px-4">Player</th>
+                                            <th className="py-2 sm:py-3 px-2 sm:px-4 text-center">Played</th>
+                                            <th className="py-2 sm:py-3 px-2 sm:px-4 text-center">Wins</th>
+                                            <th className="py-2 sm:py-3 px-2 sm:px-4 text-center">Win Rate</th>
+                                            <th className="py-2 sm:py-3 px-2 sm:px-4 text-right">High Score</th>
+                                            <th className="py-2 sm:py-3 px-2 sm:px-4 text-right">Total Score</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-100 text-base md:text-xl font-medium text-gray-700">
+                                    <tbody className="divide-y divide-gray-100 text-sm sm:text-base md:text-xl font-medium text-gray-700">
                                         {leaderboard.map((player) => {
                                             const winRate = player.gamesPlayed > 0 
                                                 ? Math.round((player.wins / player.gamesPlayed) * 100) 
@@ -101,30 +101,30 @@ export default function Leaderboard() {
                                             
                                             return (
                                                 <tr key={player.userId} className="hover:bg-yellow-50/50 transition-colors">
-                                                    <td className="py-4 px-4 font-mono font-bold text-center w-16">
-                                                        <span className={`inline-block py-1 px-2 rounded-full ${
-                                                            player.rank === 1 ? 'bg-yellow-100 text-yellow-800 text-lg' :
-                                                            player.rank === 2 ? 'bg-gray-100 text-gray-800 text-lg' :
-                                                            player.rank === 3 ? 'bg-orange-100 text-orange-900 text-lg' : 'text-gray-500'
+                                                    <td className="py-2 sm:py-4 px-2 sm:px-4 font-mono font-bold text-center w-12 sm:w-16">
+                                                        <span className={`inline-block py-0.5 sm:py-1 px-1.5 sm:px-2 rounded-full ${
+                                                            player.rank === 1 ? 'bg-yellow-100 text-yellow-800 text-base sm:text-lg' :
+                                                            player.rank === 2 ? 'bg-gray-100 text-gray-800 text-base sm:text-lg' :
+                                                            player.rank === 3 ? 'bg-orange-100 text-orange-900 text-base sm:text-lg' : 'text-gray-500'
                                                         }`}>
                                                             {getRankIcon(player.rank)}
                                                         </span>
                                                     </td>
-                                                    <td className="py-4 px-4">
-                                                        <div className="flex items-center gap-3">
+                                                    <td className="py-2 sm:py-4 px-2 sm:px-4">
+                                                        <div className="flex items-center gap-2 sm:gap-3">
                                                             {player.avatar.startsWith('/') ? (
-                                                                <img src={player.avatar} alt="Avatar" className="w-10 h-10 object-contain rendering-pixelated filter drop-shadow-sm shrink-0" />
+                                                                <img src={player.avatar} alt="Avatar" className="w-7 h-7 sm:w-10 sm:h-10 object-contain rendering-pixelated filter drop-shadow-sm shrink-0" />
                                                             ) : (
-                                                                <span className="text-2xl shrink-0">{player.avatar}</span>
+                                                                <span className="text-lg sm:text-2xl shrink-0">{player.avatar}</span>
                                                             )}
-                                                            <span className="font-bold truncate max-w-[120px] md:max-w-none">{player.name}</span>
+                                                            <span className="font-bold truncate max-w-[80px] sm:max-w-[120px] md:max-w-none">{player.name}</span>
                                                         </div>
                                                     </td>
-                                                    <td className="py-4 px-4 text-center font-mono">{player.gamesPlayed}</td>
-                                                    <td className="py-4 px-4 text-center font-mono text-green-600 font-bold">{player.wins}</td>
-                                                    <td className="py-4 px-4 text-center font-mono text-blue-600">{winRate}%</td>
-                                                    <td className="py-4 px-4 text-right font-mono font-bold">{player.highestScore}</td>
-                                                    <td className="py-4 px-4 text-right font-mono font-bold text-purple-600">{player.totalPoints}</td>
+                                                    <td className="py-2 sm:py-4 px-2 sm:px-4 text-center font-mono">{player.gamesPlayed}</td>
+                                                    <td className="py-2 sm:py-4 px-2 sm:px-4 text-center font-mono text-green-600 font-bold">{player.wins}</td>
+                                                    <td className="py-2 sm:py-4 px-2 sm:px-4 text-center font-mono text-blue-600">{winRate}%</td>
+                                                    <td className="py-2 sm:py-4 px-2 sm:px-4 text-right font-mono font-bold">{player.highestScore}</td>
+                                                    <td className="py-2 sm:py-4 px-2 sm:px-4 text-right font-mono font-bold text-purple-600">{player.totalPoints}</td>
                                                 </tr>
                                             )
                                         })}
