@@ -454,12 +454,12 @@ export function Canvas({
         }
 
         // Clean listeners to avoid dupes if re-mounting
-        socket.off('draw')
-        socket.off('fill')
-        socket.off('clear')
-        socket.off('end-draw')
-        socket.off('undo')
-        socket.off('redo')
+        socket.off('draw', onDraw)
+        socket.off('fill', onFill)
+        socket.off('clear', onClear)
+        socket.off('end-draw', onEndDraw)
+        socket.off('undo', onUndo)
+        socket.off('redo', onRedo)
 
         socket.on('draw', onDraw)
         socket.on('fill', onFill)
@@ -469,12 +469,12 @@ export function Canvas({
         socket.on('redo', onRedo)
 
         return () => {
-            socket.off('draw')
-            socket.off('fill')
-            socket.off('clear')
-            socket.off('end-draw')
-            socket.off('undo')
-            socket.off('redo')
+            socket.off('draw', onDraw)
+            socket.off('fill', onFill)
+            socket.off('clear', onClear)
+            socket.off('end-draw', onEndDraw)
+            socket.off('undo', onUndo)
+            socket.off('redo', onRedo)
         }
     }, [socket, ctx])
 
