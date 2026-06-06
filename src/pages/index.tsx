@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import { Canvas } from '@/components/Canvas'
 import { Chat } from '@/components/Chat'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import io, { type Socket } from 'socket.io-client'
 
 import FloatingSketchesBackground from '@/components/FloatingSketchesBackground'
@@ -147,7 +147,99 @@ export default function Home() {
 
   const MEMES = ["Big Brain Time! 🧠", "Picasso? 🎨", "Sketch God! ✨", "Too Fast! ⚡", "Sniper! 🎯"]
 
+  // Audio settings
+  const bgmRef = useRef<HTMLAudioElement | null>(null)
+  const [bgmMuted, setBgmMuted] = useState(true) // Default muted to comply with autoplay policy
+  const [sfxMuted, setSfxMuted] = useState(false)
+  const prevPlayerCountRef = useRef<number | null>(null)
+  const prevStatusRef = useRef<string | null>(null)
 
+  // Initialize audio settings from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedBgm = localStorage.getItem('drawchain_bgm_muted')
+      const savedSfx = localStorage.getItem('drawchain_sfx_muted')
+      setBgmMuted(savedBgm === 'true' || savedBgm === null)
+      setSfxMuted(savedSfx === 'true')
+    }
+  }, [])
+
+  // Manage playing/pausing BGM
+  useEffect(() => {
+    if (!bgmRef.current) {
+      bgmRef.current = new Audio('/sounds/bgm.mp3')
+      bgmRef.current.loop = true
+      bgmRef.current.volume = 0.12
+    }
+
+    if (!bgmMuted) {
+      bgmRef.current.play().catch(e => {
+        console.log('BGM playback blocked by autoplay:', e)
+      })
+    } else {
+      bgmRef.current.pause()
+    }
+  }, [bgmMuted])
+
+  // Handle cleanup on unmount
+  useEffect(() => {
+    return () => {
+      bgmRef.current?.pause()
+    }
+  }, [])
+
+  // Play Sound Effect (SFX) helper
+  const playSfx = (soundName: 'correct' | 'incorrect' | 'join' | 'cashregister') => {
+    if (sfxMuted) return
+    const audio = new Audio(`/sounds/${soundName}.mp3`)
+    audio.volume = 0.4
+    audio.play().catch(e => console.log('SFX playback blocked:', e))
+  }
+
+  // Toggle handlers
+  const toggleBgm = () => {
+    const newVal = !bgmMuted
+    setBgmMuted(newVal)
+    localStorage.setItem('drawchain_bgm_muted', String(newVal))
+  }
+
+  const toggleSfx = () => {
+    const newVal = !sfxMuted
+    setSfxMuted(newVal)
+    localStorage.setItem('drawchain_sfx_muted', String(newVal))
+  }
+
+  // Watch player count to play join SFX
+  useEffect(() => {
+    if (game?.players) {
+      const prevCount = prevPlayerCountRef.current
+      const currentCount = game.players.length
+      prevPlayerCountRef.current = currentCount
+      
+      if (prevCount !== null && currentCount > prevCount) {
+        playSfx('join')
+      }
+    }
+  }, [game?.players])
+
+  // Watch status transitions to play game status SFX
+  useEffect(() => {
+    if (game?.status) {
+      const prevStatus = prevStatusRef.current
+      const currentStatus = game.status
+      prevStatusRef.current = currentStatus
+      
+      if (prevStatus && currentStatus !== prevStatus) {
+        if (currentStatus === 'SELECTING') {
+          playSfx('join')
+        } else if (currentStatus === 'DRAWING') {
+          playSfx('join')
+        } else if (currentStatus === 'ENDED') {
+          playSfx('cashregister')
+        }
+      }
+    }
+  }, [game?.status])
 
   useEffect(() => {
     let newSocket: Socket | null = null;
@@ -169,12 +261,18 @@ export default function Home() {
       })
 
       newSocket.on('timer-update', (time: number) => {
-        if (isMounted) setTimeLeft(time)
+        if (isMounted) {
+          setTimeLeft(time)
+          if (time <= 10 && time > 0) {
+            playSfx('incorrect') // clock tick thud sound
+          }
+        }
       })
 
       newSocket.on('system-message', (msg: string) => {
         if (!isMounted) return
         if (msg.includes('guessed the word')) {
+          playSfx('correct')
           const randomMeme = MEMES[Math.floor(Math.random() * MEMES.length)]
           setMeme(randomMeme)
           setTimeout(() => setMeme(null), 3000)
@@ -319,6 +417,26 @@ export default function Home() {
           </Link>
           
           <div className="flex items-center gap-1 sm:gap-2">
+            {/* Audio Controls */}
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={toggleBgm}
+                className={`p-1 sm:p-2 rounded-md sm:rounded-xl border-2 border-black font-bold text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer ${!bgmMuted ? 'bg-blue-100 hover:bg-blue-200 text-blue-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-400'}`}
+                title={bgmMuted ? "Unmute Background Music" : "Mute Background Music"}
+              >
+                {!bgmMuted ? '🎵 On' : '🎵 Off'}
+              </button>
+              <button
+                type="button"
+                onClick={toggleSfx}
+                className={`p-1 sm:p-2 rounded-md sm:rounded-xl border-2 border-black font-bold text-[10px] sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer ${!sfxMuted ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-400'}`}
+                title={sfxMuted ? "Unmute Sound Effects" : "Mute Sound Effects"}
+              >
+                {!sfxMuted ? '🔊 On' : '🔊 Off'}
+              </button>
+            </div>
+
             <Link href="/leaderboard" className="bg-yellow-100 hover:bg-yellow-200 border-2 border-black px-2 py-0.5 rounded-md text-[10px] sm:px-4 sm:py-2 sm:rounded-xl sm:text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all whitespace-nowrap">
               <span className="hidden sm:inline">Leaderboard</span> 🏆
             </Link>
@@ -566,15 +684,36 @@ export default function Home() {
               {/* Center Canvas Area (Desktop) */}
               <div className="bg-white p-2 rounded-3xl shadow-xl flex-1 h-full sketch-border relative flex flex-col min-h-0 overflow-hidden shrink-0 z-0">
                 <div className="flex bg-gray-100 p-2 rounded-t-3xl justify-between items-center px-4 border-b z-10 shrink-0">
-                  <div className="text-lg flex flex-col leading-tight">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Room: <span className="text-black">{game?.roomId}</span></span>
-                      <button onClick={copyRoomId} className="bg-white border border-gray-300 rounded px-1.5 py-0.5 hover:bg-gray-50 text-[10px] uppercase font-bold text-gray-500 shadow-sm active:translate-y-px transition-all" title="Copy Room ID">
-                        📋 Copy
+                  <div className="flex items-center gap-4">
+                    <div className="text-lg flex flex-col leading-tight">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Room: <span className="text-black">{game?.roomId}</span></span>
+                        <button onClick={copyRoomId} className="bg-white border border-gray-300 rounded px-1.5 py-0.5 hover:bg-gray-50 text-[10px] uppercase font-bold text-gray-500 shadow-sm active:translate-y-px transition-all" title="Copy Room ID">
+                          📋 Copy
+                        </button>
+                      </div>
+                      <span className="text-sm text-gray-500 font-bold">{game?.status === 'LOBBY' ? 'Waiting to Start' : `Round ${game?.currentRound} / ${game?.maxRounds}`}</span>
+                      {game?.status === 'DRAWING' && <span className="font-bold text-blue-600 animate-pulse">🎨 {currentDrawerName} is Drawing...</span>}
+                    </div>
+                    {/* Audio Controls (Desktop) */}
+                    <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-gray-200 shadow-sm shrink-0 font-hand">
+                      <button
+                        type="button"
+                        onClick={toggleBgm}
+                        className={`p-1.5 rounded-lg border-2 border-black font-bold text-xs shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px active:translate-y-px transition-all cursor-pointer ${!bgmMuted ? 'bg-blue-100 hover:bg-blue-200 text-blue-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-400'}`}
+                        title={bgmMuted ? "Mute BGM" : "Play BGM"}
+                      >
+                        {!bgmMuted ? '🎵 On' : '🎵 Off'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={toggleSfx}
+                        className={`p-1.5 rounded-lg border-2 border-black font-bold text-xs shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px active:translate-y-px transition-all cursor-pointer ${!sfxMuted ? 'bg-yellow-100 hover:bg-yellow-200 text-yellow-600' : 'bg-gray-100 hover:bg-gray-200 text-gray-400'}`}
+                        title={sfxMuted ? "Mute SFX" : "Play SFX"}
+                      >
+                        {!sfxMuted ? '🔊 On' : '🔊 Off'}
                       </button>
                     </div>
-                    <span className="text-sm text-gray-500 font-bold">{game?.status === 'LOBBY' ? 'Waiting to Start' : `Round ${game?.currentRound} / ${game?.maxRounds}`}</span>
-                    {game?.status === 'DRAWING' && <span className="font-bold text-blue-600 animate-pulse">🎨 {currentDrawerName} is Drawing...</span>}
                   </div>
                   {game?.status !== 'LOBBY' && (
                     <div className="text-2xl font-bold text-red-500 font-mono bg-white px-3 py-1 rounded shadow-inner">
@@ -696,6 +835,25 @@ export default function Home() {
                     <button onClick={copyRoomId} className="bg-white border text-gray-500 rounded px-0.5 text-[9px] sm:text-[10px] shadow-sm active:scale-95">📋</button>
                   </div>
                 </div>
+
+                {/* Audio Controls (Mobile) */}
+                <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-250 shrink-0 font-hand">
+                  <button
+                    type="button"
+                    onClick={toggleBgm}
+                    className={`px-1.5 py-0.5 rounded-lg border border-black font-bold text-[8px] sm:text-[10px] transition-all cursor-pointer ${!bgmMuted ? 'bg-blue-100 text-blue-600' : 'bg-white text-gray-400'}`}
+                  >
+                    {!bgmMuted ? '🎵 On' : '🎵 Off'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleSfx}
+                    className={`px-1.5 py-0.5 rounded-lg border border-black font-bold text-[8px] sm:text-[10px] transition-all cursor-pointer ${!sfxMuted ? 'bg-yellow-100 text-yellow-600' : 'bg-white text-gray-400'}`}
+                  >
+                    {!sfxMuted ? '🔊 On' : '🔊 Off'}
+                  </button>
+                </div>
+
                 <div className="flex flex-col items-center leading-tight shrink-0">
                   <span className="font-bold text-gray-700 text-[10px] sm:text-xs">
                     {game?.status === 'LOBBY' ? 'Lobby' : `R${game?.currentRound}/${game?.maxRounds}`}
