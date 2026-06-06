@@ -447,7 +447,7 @@ export default function Home() {
                               onClick={() => setAvatar(a)}
                               className={`p-1 rounded-xl transition-all hover:scale-110 hover:shadow-md shrink-0 ${avatar === a ? 'bg-blue-100 border-2 border-blue-400 scale-125 shadow-lg' : 'bg-gray-50'}`}
                             >
-                              <img src={a} alt="Avatar" className="w-12 h-12 object-contain" loading="lazy" />
+                              <img src={a} alt="Avatar" className="w-12 h-12 object-contain" />
                             </button>
                           ))}
                         </div>
@@ -909,7 +909,7 @@ export default function Home() {
                         onClick={() => setAvatar(a)}
                         className={`p-1 rounded-lg shrink-0 border-2 transition-all ${avatar === a ? 'bg-blue-100 border-blue-500 scale-110' : 'bg-gray-50 border-transparent'}`}
                       >
-                        <img src={a} alt="Avatar" className="w-8 h-8 object-contain" loading="lazy" />
+                        <img src={a} alt="Avatar" className="w-8 h-8 object-contain" />
                       </button>
                     ))}
                   </div>

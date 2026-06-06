@@ -333,7 +333,7 @@ export default function Profile() {
                                             className={`p-1 rounded-xl transition-all hover:scale-105 shrink-0 flex items-center justify-center border-2 ${editAvatar === a ? 'bg-blue-100 border-blue-400 scale-105 shadow-md' : 'bg-white border-transparent'}`}
                                             disabled={isSaving}
                                         >
-                                            <img src={a} alt="Avatar" className="w-10 h-10 object-contain" loading="lazy" />
+                                            <img src={a} alt="Avatar" className="w-10 h-10 object-contain" />
                                         </button>
                                     ))}
                                 </div>
