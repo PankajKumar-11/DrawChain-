@@ -2,6 +2,7 @@ import "@/styles/globals.css";
 import type { AppProps } from "next/app";
 import { Patrick_Hand } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
+import Head from "next/head";
 
 const patrickHand = Patrick_Hand({
     weight: "400",
@@ -12,6 +13,9 @@ const patrickHand = Patrick_Hand({
 export default function App({ Component, pageProps: { session, ...pageProps } }: AppProps) {
     return (
         <SessionProvider session={session}>
+            <Head>
+                <link rel="icon" href="/favicon.ico" />
+            </Head>
             <main className={`${patrickHand.variable} font-sans`}>
                 <Component {...pageProps} />
             </main>
