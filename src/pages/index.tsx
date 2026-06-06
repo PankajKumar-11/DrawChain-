@@ -338,7 +338,8 @@ export default function Home() {
   }
 
   // Derived state
-  const isDrawer = game && socket && game.players[game.drawerIndex]?.id === socket.id
+  const isHost = !!(game && game.players.find(p => p.id === game.hostId)?.name === username)
+  const isDrawer = !!(game && game.players[game.drawerIndex]?.name === username)
   const currentDrawerId = game?.players[game?.drawerIndex]?.id
   const currentDrawerName = game?.players[game?.drawerIndex]?.name || 'Unknown'
 
@@ -649,7 +650,7 @@ export default function Home() {
                           <div className="flex flex-col leading-tight">
                             <span className="text-base flex items-center gap-2">
                               {p.name}
-                              {socket?.id === p.id && <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full border border-blue-200 font-bold">You</span>}
+                              {p.name === username && <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full border border-blue-200 font-bold">You</span>}
                             </span>
                             {currentDrawerId === p.id && <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Drawing</span>}
                           </div>
@@ -665,7 +666,7 @@ export default function Home() {
 
                 {/* Action Buttons */}
                 <div className="flex flex-col gap-3 mt-4 shrink-0 pt-4 border-t-2 border-gray-100 border-dashed">
-                  {game?.status === 'LOBBY' && game?.hostId === socket?.id ? (
+                  {game?.status === 'LOBBY' && isHost ? (
                     <button onClick={startGame} className="w-full bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 shadow-[0_4px_0_rgb(22,163,74)] active:shadow-none active:translate-y-[4px] transition-all border-2 border-green-600">Start Game 🚀</button>
                   ) : (game?.status === 'LOBBY' &&
                     <div className="text-center text-gray-400 text-sm italic py-2">Waiting for host...</div>
@@ -768,7 +769,7 @@ export default function Home() {
                                 <span className="font-bold flex gap-2 items-center">
                                   <span>{i === 0 ? '👑' : `#${i + 1}`}</span>
                                   {p.name}
-                                  {socket?.id === p.id && <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full border border-blue-200 font-bold">You</span>}
+                                  {p.name === username && <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full border border-blue-200 font-bold">You</span>}
                                 </span>
                                 <span className="font-bold">{p.score}</span>
                               </div>
@@ -776,7 +777,7 @@ export default function Home() {
                           ))}
                         </div>
                       </div>
-                      {game.hostId === socket?.id ? (
+                      {isHost ? (
                         <button onClick={startGame} className="w-full bg-green-500 text-white py-3 rounded-xl font-bold hover:bg-green-600 shadow-md transform hover:scale-105 transition-all">Play Again ↻</button>
                       ) : (
                         <div className="w-full text-center text-white/80 font-bold animate-pulse">Waiting for host to restart...</div>
@@ -918,7 +919,7 @@ export default function Home() {
                               <span className="font-bold flex gap-1 items-center">
                                 <span>{i === 0 ? '👑' : `#${i + 1}`}</span>
                                 {p.name}
-                                {socket?.id === p.id && <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded">You</span>}
+                                {p.name === username && <span className="text-[10px] bg-blue-100 text-blue-600 px-1 rounded">You</span>}
                               </span>
                               <span className="font-bold">{p.score}</span>
                             </div>
@@ -926,7 +927,7 @@ export default function Home() {
                         ))}
                       </div>
                     </div>
-                    {game.hostId === socket?.id ? (
+                    {isHost ? (
                       <button onClick={startGame} className="w-full max-w-xs bg-green-500 text-white py-2 rounded-xl font-bold hover:bg-green-600 shadow-md transform hover:scale-105 transition-all text-sm">Play Again ↻</button>
                     ) : (
                       <div className="w-full text-center text-white/80 font-bold animate-pulse text-sm">Waiting for host to restart...</div>
@@ -959,7 +960,7 @@ export default function Home() {
                 <div className="flex justify-between items-center border-b pb-1 text-xs px-1 font-hand">
                   <span className="font-bold text-gray-500">Standings 🏆</span>
                   <div className="flex gap-2">
-                    {game?.status === 'LOBBY' && game?.hostId === socket?.id && (
+                    {game?.status === 'LOBBY' && isHost && (
                       <button onClick={startGame} className="bg-green-500 hover:bg-green-600 text-white px-2 py-0.5 rounded font-bold text-[10px] shadow-sm animate-pulse">
                         Start Game 🚀
                       </button>
