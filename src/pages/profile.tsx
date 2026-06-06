@@ -32,11 +32,89 @@ interface ProfileData {
 }
 
 export default function Profile() {
-    const { data: session, status } = useSession()
+    const { data: session, status, update } = useSession()
     const router = useRouter()
     const [profile, setProfile] = useState<ProfileData | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+
+    const [showEditModal, setShowEditModal] = useState(false)
+    const [editName, setEditName] = useState('')
+    const [editAvatar, setEditAvatar] = useState('')
+    const [isSaving, setIsSaving] = useState(false)
+    const [saveError, setSaveError] = useState<string | null>(null)
+
+    const AVATARS = [
+        '/avatars/avatar-01.png',
+        '/avatars/avatar-02.png',
+        '/avatars/avatar-03.png',
+        '/avatars/avatar-04.png',
+        '/avatars/avatar-05.png',
+        '/avatars/avatar-06.png',
+        '/avatars/avatar-07.png',
+        '/avatars/avatar-08.png',
+        '/avatars/avatar-09.png',
+        '/avatars/avatar-10.png',
+        '/avatars/avatar-11.png',
+        '/avatars/avatar-12.png'
+    ]
+
+    const openEditModal = () => {
+        if (profile) {
+            setEditName(profile.user.name)
+            setEditAvatar(profile.user.avatar)
+            setSaveError(null)
+            setShowEditModal(true)
+        }
+    }
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (editName.trim().length < 2 || editName.trim().length > 20) {
+            setSaveError('Username must be between 2 and 20 characters.')
+            return
+        }
+        
+        setIsSaving(true)
+        setSaveError(null)
+        
+        try {
+            const res = await fetch('/api/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: editName, avatar: editAvatar })
+            })
+            
+            if (!res.ok) {
+                const data = await res.json()
+                throw new Error(data.message || 'Failed to update profile.')
+            }
+            
+            const data = await res.json()
+            
+            // Update NextAuth session
+            await update({
+                name: data.user.name,
+                image: data.user.avatar
+            })
+            
+            // Update local profile state
+            setProfile(prev => prev ? {
+                ...prev,
+                user: {
+                    ...prev.user,
+                    name: data.user.name,
+                    avatar: data.user.avatar
+                }
+            } : null)
+            
+            setShowEditModal(false)
+        } catch (err: any) {
+            setSaveError(err.message)
+        } finally {
+            setIsSaving(false)
+        }
+    }
 
     // Redirect to home if unauthenticated
     useEffect(() => {
@@ -118,7 +196,13 @@ export default function Profile() {
                                     )}
                                 </div>
                                 <h2 className="text-xl sm:text-2xl font-bold font-hand text-gray-800">{profile.user.name}</h2>
-                                <p className="text-gray-500 font-hand text-sm sm:text-base truncate max-w-full">{profile.user.email}</p>
+                                <p className="text-gray-500 font-hand text-sm sm:text-base truncate max-w-full mb-3">{profile.user.email}</p>
+                                <button
+                                    onClick={openEditModal}
+                                    className="bg-blue-100 hover:bg-blue-200 border-2 border-black px-4 py-1.5 rounded-xl font-bold font-hand text-xs sm:text-sm shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer shrink-0"
+                                >
+                                    Edit Profile ✏️
+                                </button>
                             </div>
 
                             {/* Statistics summary card */}
@@ -201,6 +285,81 @@ export default function Profile() {
                     </div>
                 </div>
             </main>
+
+            {/* Edit Profile Modal */}
+            {showEditModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in font-hand">
+                    <div className="bg-white p-6 rounded-2xl sm:rounded-3xl sketch-border shadow-2xl max-w-md w-full relative transform animate-fade-in-up flex flex-col gap-4">
+                        <button
+                            type="button"
+                            onClick={() => setShowEditModal(false)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-black font-bold text-xl transition-colors"
+                        >
+                            &times;
+                        </button>
+                        
+                        <h2 className="text-2xl font-bold border-b-2 border-dashed border-gray-200 pb-2 text-center text-gray-800">
+                            Edit Profile
+                        </h2>
+
+                        <form onSubmit={handleSave} className="flex flex-col gap-4">
+                            {saveError && (
+                                <div className="bg-red-50 text-red-600 border-2 border-red-200 rounded-xl p-3 text-xs sm:text-sm font-bold text-center">
+                                    {saveError}
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-500 mb-1">Username</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={editName}
+                                    onChange={e => setEditName(e.target.value)}
+                                    className="w-full border-2 border-gray-200 rounded-xl p-2.5 text-base focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-hand"
+                                    placeholder="e.g. Leonardo"
+                                    disabled={isSaving}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-500 mb-1.5 text-center">Choose Avatar</label>
+                                <div className="grid grid-cols-4 gap-2.5 max-h-[160px] overflow-y-auto p-1.5 no-scrollbar bg-gray-50 rounded-xl border border-gray-200">
+                                    {AVATARS.map(a => (
+                                        <button
+                                            key={a}
+                                            type="button"
+                                            onClick={() => setEditAvatar(a)}
+                                            className={`p-1 rounded-xl transition-all hover:scale-105 shrink-0 flex items-center justify-center border-2 ${editAvatar === a ? 'bg-blue-100 border-blue-400 scale-105 shadow-md' : 'bg-white border-transparent'}`}
+                                            disabled={isSaving}
+                                        >
+                                            <img src={a} alt="Avatar" className="w-10 h-10 object-contain" loading="lazy" />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowEditModal(false)}
+                                    className="flex-1 bg-white hover:bg-gray-50 border-2 border-black py-2 rounded-xl font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer text-center"
+                                    disabled={isSaving}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 bg-blue-500 hover:bg-blue-600 border-2 border-black text-white py-2 rounded-xl font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all cursor-pointer text-center"
+                                    disabled={isSaving}
+                                >
+                                    {isSaving ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
