@@ -794,7 +794,12 @@ export default function Home() {
                     </div>
                   )}
 
-                  <Canvas socket={socket} roomId={roomId} isAllowedToDraw={!!(isDrawer && game?.status === 'DRAWING')} />
+                  <Canvas
+                    key={`${game?.roomId}-${game?.currentRound}-${game?.drawerIndex}-${game?.status}`}
+                    socket={socket}
+                    roomId={roomId}
+                    isAllowedToDraw={!!(isDrawer && game?.status === 'DRAWING')}
+                  />
                 </div>
               </div>
 
@@ -937,7 +942,12 @@ export default function Home() {
                   </div>
                 )}
 
-                <Canvas socket={socket} roomId={roomId} isAllowedToDraw={!!(isDrawer && game?.status === 'DRAWING')} />
+                <Canvas
+                  key={`${game?.roomId}-${game?.currentRound}-${game?.drawerIndex}-${game?.status}`}
+                  socket={socket}
+                  roomId={roomId}
+                  isAllowedToDraw={!!(isDrawer && game?.status === 'DRAWING')}
+                />
               </div>
 
               {/* Horizontal Player Rankings Strip */}

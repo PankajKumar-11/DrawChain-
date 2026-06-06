@@ -251,8 +251,10 @@ const handlePlayerRemove = async (io: Server, roomId: string, playerId: string) 
         gameStore.clearTimer(roomId)
         game.status = 'ENDED'
         const winner = game.players[0]
-        winner.score += 100
-        game.hostId = winner.id
+        if (winner) {
+            winner.score += 100
+            game.hostId = winner.id
+        }
 
         io.to(roomId).emit('game-update', getPublicState(game, winner.id))
         io.to(roomId).emit('system-message', 'Everyone left! You win! 🏆')
@@ -269,7 +271,7 @@ const handlePlayerRemove = async (io: Server, roomId: string, playerId: string) 
             io.to(roomId).emit('system-message', `${game.players[0].name} is now the Host! 👑`)
         }
 
-        if (wasDrawer && game.status === 'DRAWING') {
+        if (wasDrawer && (game.status === 'DRAWING' || game.status === 'SELECTING')) {
             io.to(roomId).emit('system-message', 'Drawer disconnected! Skipping turn...')
             game.drawerIndex--
             await gameStore.setGame(roomId, game)
@@ -470,7 +472,7 @@ export default function SocketHandler(req: any, res: any) {
             if (game && game.status === 'DRAWING') {
                 if (data.text.trim().toLowerCase() === game.currentWord.toLowerCase()) {
                     const player = game.players.find(p => p.id === socket.id)
-                    if (player && !player.guessed && player.id !== game.players[game.drawerIndex].id) {
+                    if (player && !player.guessed && player.id !== game.players[game.drawerIndex]?.id) {
                         player.guessed = true
                         const points = Math.max(10, Math.ceil(game.timeLeft / game.drawTime * 500))
                         player.score += points
@@ -478,12 +480,14 @@ export default function SocketHandler(req: any, res: any) {
                         socket.emit('system-message', `🎉 You guessed the word! (+${points})`)
 
                         const drawer = game.players[game.drawerIndex]
-                        drawer.score += 50
+                        if (drawer) {
+                            drawer.score += 50
+                        }
 
                         io.to(data.roomId).emit('game-update', getPublicState(game, socket.id))
                         game.players.forEach(p => io.to(p.id).emit('game-update', getPublicState(game, p.id)))
 
-                        const guessers = game.players.filter(p => p.id !== drawer.id)
+                        const guessers = drawer ? game.players.filter(p => p.id !== drawer.id) : game.players
                         if (guessers.every(p => p.guessed)) {
                             io.to(data.roomId).emit('system-message', 'Everyone guessed it!')
                             await gameStore.setGame(data.roomId, game)
