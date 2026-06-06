@@ -5,6 +5,9 @@ interface CanvasProps {
     socket: Socket | null
     roomId: string
     isAllowedToDraw: boolean
+    currentRound?: number
+    drawerIndex?: number
+    gameStatus?: string
 }
 
 const COLORS = [
@@ -21,7 +24,14 @@ interface Clear { type: 'clear' }
 
 type Action = Stroke | Fill | Clear
 
-export function Canvas({ socket, roomId, isAllowedToDraw }: CanvasProps) {
+export function Canvas({
+    socket,
+    roomId,
+    isAllowedToDraw,
+    currentRound,
+    drawerIndex,
+    gameStatus
+}: CanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null)
     const [isDrawing, setIsDrawing] = useState(false)
     const [ctx, setCtx] = useState<CanvasRenderingContext2D | null>(null)
@@ -94,6 +104,16 @@ export function Canvas({ socket, roomId, isAllowedToDraw }: CanvasProps) {
         ctx.strokeStyle = tool === 'eraser' ? '#FFFFFF' : color
         ctx.lineWidth = tool === 'eraser' ? 20 : 2
     }, [color, tool, ctx])
+
+    // Reset canvas state and clear drawing when round, drawer, or status changes
+    useEffect(() => {
+        setHistory([])
+        setRedoStack([])
+        if (ctx) {
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        }
+    }, [currentRound, drawerIndex, gameStatus, ctx])
 
     // --- Audio Logic ---
     // --- Audio Logic ---

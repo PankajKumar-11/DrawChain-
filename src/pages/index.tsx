@@ -795,10 +795,12 @@ export default function Home() {
                   )}
 
                   <Canvas
-                    key={`${game?.roomId}-${game?.currentRound}-${game?.drawerIndex}-${game?.status}`}
                     socket={socket}
                     roomId={roomId}
                     isAllowedToDraw={!!(isDrawer && game?.status === 'DRAWING')}
+                    currentRound={game?.currentRound}
+                    drawerIndex={game?.drawerIndex}
+                    gameStatus={game?.status}
                   />
                 </div>
               </div>
@@ -943,10 +945,12 @@ export default function Home() {
                 )}
 
                 <Canvas
-                  key={`${game?.roomId}-${game?.currentRound}-${game?.drawerIndex}-${game?.status}`}
                   socket={socket}
                   roomId={roomId}
                   isAllowedToDraw={!!(isDrawer && game?.status === 'DRAWING')}
+                  currentRound={game?.currentRound}
+                  drawerIndex={game?.drawerIndex}
+                  gameStatus={game?.status}
                 />
               </div>
 
