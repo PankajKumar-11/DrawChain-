@@ -355,9 +355,26 @@ export default function SocketHandler(req: any, res: any) {
             // Resolve auth from session token
             let authUser: any = null
             try {
+                const req = socket.request as any
+                if (!req.cookies && req.headers.cookie) {
+                    const cookies: Record<string, string> = {}
+                    const rawCookies = req.headers.cookie.split(';')
+                    for (const rawCookie of rawCookies) {
+                        const parts = rawCookie.split('=')
+                        if (parts.length >= 2) {
+                            const name = parts[0].trim()
+                            const value = parts.slice(1).join('=').trim()
+                            cookies[name] = decodeURIComponent(value)
+                        }
+                    }
+                    req.cookies = cookies
+                }
+
                 const token = await getToken({ 
-                    req: socket.request as any, 
-                    secret: process.env.NEXTAUTH_SECRET || 'drawchain-default-development-secret-key-12345' 
+                    req, 
+                    secret: process.env.NEXTAUTH_SECRET || 'drawchain-default-development-secret-key-12345',
+                    secureCookie: process.env.NODE_ENV === 'production',
+                    cookieName: process.env.NODE_ENV === 'production' ? '__Secure-next-auth.session-token' : 'next-auth.session-token'
                 })
                 if (token) {
                     authUser = token
@@ -389,6 +406,8 @@ export default function SocketHandler(req: any, res: any) {
                 if (authUser) {
                     p.name = authUser.name || p.name
                     p.avatar = authUser.picture || p.avatar
+                    p.userId = authUser.id
+                    p.isGuest = false
                 } else {
                     p.name = username || p.name
                     if (avatar) p.avatar = avatar
