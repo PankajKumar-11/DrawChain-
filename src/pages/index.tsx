@@ -313,9 +313,10 @@ export default function Home() {
       {/* Responsive Header Wrapper */}
       {!hasJoined && (
         <header className="absolute top-3 sm:top-6 left-3 right-3 sm:left-6 sm:right-6 lg:left-8 lg:right-8 z-50 flex flex-row justify-between items-center gap-2 font-hand">
-          <h1 className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800 tracking-wider animate-bounce-slow font-hand shrink-0" style={{ textShadow: '1.5px 1.5px 0px #ccc' }}>
-            DrawChain ✏️
-          </h1>
+          <Link href="/" onClick={() => setView('LANDING')} className="text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800 tracking-wider font-hand shrink-0 flex items-center gap-1.5 hover:opacity-80 transition-all" style={{ textShadow: '1.5px 1.5px 0px #ccc' }}>
+            <img src="/logo.png" alt="DrawChain" className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 object-contain" />
+            <span className="hidden sm:inline">DrawChain</span>
+          </Link>
           
           <div className="flex items-center gap-1 sm:gap-2">
             <Link href="/leaderboard" className="bg-yellow-100 hover:bg-yellow-200 border-2 border-black px-2 py-0.5 rounded-md text-[10px] sm:px-4 sm:py-2 sm:rounded-xl sm:text-base font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:translate-y-px hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] transition-all whitespace-nowrap">
@@ -354,34 +355,49 @@ export default function Home() {
 
             {/* VIEW 1: LANDING SELECTION */}
             {view === 'LANDING' && (
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 animate-fade-in-up w-full max-w-4xl justify-center items-stretch px-1">
-                {/* Create Card */}
-                <button onClick={() => { setView('CREATE'); setRoomId(generateRoomId()) }} className="flex-1 bg-white p-5 sm:p-8 rounded-2xl sketch-border shadow-lg hover:scale-[1.02] sm:hover:scale-105 transition-transform group relative overflow-hidden text-left min-h-[140px] sm:min-h-[200px] flex flex-col justify-between">
-                  <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <span className="text-6xl sm:text-9xl">🎨</span>
+              <div className="flex flex-col items-center gap-6 w-full max-w-4xl px-1">
+                {/* Large Brand Logo */}
+                <div className="flex flex-col items-center gap-3 animate-fade-in-up text-center">
+                  <div className="bg-white p-4 rounded-3xl sketch-border shadow-xl hover:rotate-3 transition-transform duration-300">
+                    <img src="/logo.png" alt="DrawChain Logo" className="w-24 h-24 sm:w-32 sm:h-32 object-contain" />
                   </div>
-                  <div>
-                    <h2 className="text-xl sm:text-3xl font-bold mb-1 sm:mb-2 group-hover:text-blue-600 transition-colors font-hand">Create Room</h2>
-                    <p className="text-gray-500 font-medium text-sm sm:text-base">Host a new game, set the rules, and invite friends.</p>
-                  </div>
-                  <div className="mt-3 sm:mt-6 bg-blue-100 text-blue-600 font-bold py-1.5 px-3 sm:py-2 sm:px-4 rounded-lg w-fit group-hover:bg-blue-600 group-hover:text-white transition-colors text-sm sm:text-base">
-                    Start Hosting &rarr;
-                  </div>
-                </button>
+                  <h1 className="text-3xl sm:text-5xl font-black text-gray-800 tracking-wider font-hand mt-2" style={{ textShadow: '2px 2px 0px #ccc' }}>
+                    DrawChain
+                  </h1>
+                  <p className="text-gray-500 font-hand text-base sm:text-lg font-bold -mt-2">
+                    Connect, Draw, and Guess! 🎨⚡
+                  </p>
+                </div>
 
-                {/* Join Card */}
-                <button onClick={() => { setView('JOIN'); setRoomId('') }} className="flex-1 bg-white p-5 sm:p-8 rounded-2xl sketch-border shadow-lg hover:scale-[1.02] sm:hover:scale-105 transition-transform group relative overflow-hidden text-left min-h-[140px] sm:min-h-[200px] flex flex-col justify-between">
-                  <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <span className="text-6xl sm:text-9xl">🚀</span>
-                  </div>
-                  <div>
-                    <h2 className="text-xl sm:text-3xl font-bold mb-1 sm:mb-2 group-hover:text-green-600 transition-colors font-hand">Join Room</h2>
-                    <p className="text-gray-500 font-medium text-sm sm:text-base">Have a code? Jump into an existing game lobby.</p>
-                  </div>
-                  <div className="mt-3 sm:mt-6 bg-green-100 text-green-600 font-bold py-1.5 px-3 sm:py-2 sm:px-4 rounded-lg w-fit group-hover:bg-green-600 group-hover:text-white transition-colors text-sm sm:text-base">
-                    Join Game &rarr;
-                  </div>
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-6 w-full justify-center items-stretch mt-4">
+                  {/* Create Card */}
+                  <button onClick={() => { setView('CREATE'); setRoomId(generateRoomId()) }} className="flex-1 bg-white p-5 sm:p-8 rounded-2xl sketch-border shadow-lg hover:scale-[1.02] sm:hover:scale-105 transition-transform group relative overflow-hidden text-left min-h-[140px] sm:min-h-[200px] flex flex-col justify-between">
+                    <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <span className="text-6xl sm:text-9xl">🎨</span>
+                    </div>
+                    <div>
+                      <h2 className="text-xl sm:text-3xl font-bold mb-1 sm:mb-2 group-hover:text-blue-600 transition-colors font-hand">Create Room</h2>
+                      <p className="text-gray-500 font-medium text-sm sm:text-base">Host a new game, set the rules, and invite friends.</p>
+                    </div>
+                    <div className="mt-3 sm:mt-6 bg-blue-100 text-blue-600 font-bold py-1.5 px-3 sm:py-2 sm:px-4 rounded-lg w-fit group-hover:bg-blue-600 group-hover:text-white transition-colors text-sm sm:text-base">
+                      Start Hosting &rarr;
+                    </div>
+                  </button>
+
+                  {/* Join Card */}
+                  <button onClick={() => { setView('JOIN'); setRoomId('') }} className="flex-1 bg-white p-5 sm:p-8 rounded-2xl sketch-border shadow-lg hover:scale-[1.02] sm:hover:scale-105 transition-transform group relative overflow-hidden text-left min-h-[140px] sm:min-h-[200px] flex flex-col justify-between">
+                    <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <span className="text-6xl sm:text-9xl">🚀</span>
+                    </div>
+                    <div>
+                      <h2 className="text-xl sm:text-3xl font-bold mb-1 sm:mb-2 group-hover:text-green-600 transition-colors font-hand">Join Room</h2>
+                      <p className="text-gray-500 font-medium text-sm sm:text-base">Have a code? Jump into an existing game lobby.</p>
+                    </div>
+                    <div className="mt-3 sm:mt-6 bg-green-100 text-green-600 font-bold py-1.5 px-3 sm:py-2 sm:px-4 rounded-lg w-fit group-hover:bg-green-600 group-hover:text-white transition-colors text-sm sm:text-base">
+                      Join Game &rarr;
+                    </div>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -431,7 +447,7 @@ export default function Home() {
                               onClick={() => setAvatar(a)}
                               className={`p-1 rounded-xl transition-all hover:scale-110 hover:shadow-md shrink-0 ${avatar === a ? 'bg-blue-100 border-2 border-blue-400 scale-125 shadow-lg' : 'bg-gray-50'}`}
                             >
-                              <img src={a} alt="Avatar" className="w-12 h-12 object-contain rendering-pixelated" />
+                              <img src={a} alt="Avatar" className="w-12 h-12 object-contain" loading="lazy" />
                             </button>
                           ))}
                         </div>
@@ -494,7 +510,10 @@ export default function Home() {
             <div className="hidden lg:flex lg:flex-row gap-4 w-full h-full lg:max-h-[800px] items-stretch animate-fade-in-up flex-grow min-h-0 relative">
               {/* Desktop Left Sidebar (Players - Sorted) */}
               <div className="lg:flex lg:w-60 lg:flex-col lg:h-full lg:bg-white lg:p-3 lg:rounded-xl lg:shadow-lg lg:sketch-border lg:min-h-0 lg:shrink-0">
-                <h3 className="text-xl font-bold mb-2 border-b pb-1 text-center font-hand bg-yellow-50 rounded">DrawChain ✏️</h3>
+                <div className="flex items-center justify-center gap-1.5 mb-2 border-b pb-2 bg-yellow-50/50 p-1.5 rounded-lg border border-yellow-100 font-hand shrink-0">
+                  <img src="/logo.png" alt="DrawChain" className="w-5 h-5 object-contain" />
+                  <span className="text-lg font-bold text-gray-800">DrawChain</span>
+                </div>
                 <div className="flex justify-between items-center mb-2 border-b pb-2">
                   <h3 className="text-lg font-bold">Standings</h3>
                   <span className="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-500">Score</span>
@@ -508,7 +527,7 @@ export default function Home() {
                           <div className={`font-mono font-bold text-xs w-5 h-5 flex items-center justify-center rounded-full ${i === 0 ? 'bg-yellow-300 text-yellow-800' : i === 1 ? 'bg-gray-300 text-gray-800' : i === 2 ? 'bg-orange-300 text-orange-900' : 'bg-gray-100 text-gray-500'}`}>
                             #{i + 1}
                           </div>
-                          <img src={p.avatar} alt="Avatar" className="w-10 h-10 object-contain rendering-pixelated filter drop-shadow-sm" />
+                          <img src={p.avatar} alt="Avatar" className="w-10 h-10 object-contain filter drop-shadow-sm" loading="lazy" />
                           <div className="flex flex-col leading-tight">
                             <span className="text-base flex items-center gap-2">
                               {p.name}
@@ -645,7 +664,7 @@ export default function Home() {
                 <div className="sketch-border bg-white p-2 lg:p-3 h-full flex flex-col shadow-lg relative min-h-0 w-full">
                   <div className="absolute -right-2 top-10 w-8 h-24 bg-gray-200 rounded-r-md border-l border-gray-300 hidden lg:block"></div>
                   <div className="hidden lg:flex mb-2 items-center gap-2 border-b-2 border-gray-200 pb-2 shrink-0 font-hand">
-                    <img src={avatar} alt="Your Avatar" className="w-10 h-10 object-contain rendering-pixelated" />
+                    <img src={avatar} alt="Your Avatar" className="w-10 h-10 object-contain" loading="lazy" />
                     <span className="font-bold text-lg truncate">{username}</span>
                   </div>
                   <div className="flex-grow min-h-0 relative text-xs lg:text-base">
@@ -666,7 +685,10 @@ export default function Home() {
               {/* Header Bar */}
               <div className="bg-white p-2 sm:p-3 rounded-xl sm:rounded-2xl sketch-border shadow-md flex justify-between items-center text-xs sm:text-sm shrink-0 gap-1">
                 <div className="flex flex-col leading-tight shrink-0">
-                  <span className="font-bold text-blue-600 font-hand text-sm sm:text-base">DrawChain ✏️</span>
+                  <div className="flex items-center gap-1.5">
+                    <img src="/logo.png" alt="DrawChain" className="w-4 h-4 sm:w-5 sm:h-5 object-contain" />
+                    <span className="font-bold text-blue-600 font-hand text-sm sm:text-base">DrawChain</span>
+                  </div>
                   <div className="flex items-center gap-0.5">
                     <span className="text-[9px] sm:text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                       Room: {game?.roomId}
@@ -787,7 +809,7 @@ export default function Home() {
                         ${i === 0 ? 'bg-yellow-300 text-yellow-800' : i === 1 ? 'bg-gray-300 text-gray-800' : 'bg-gray-100 text-gray-500'}`}>
                         {i + 1}
                       </div>
-                      <img src={p.avatar} alt="Avatar" className="w-6 h-6 sm:w-8 sm:h-8 object-contain rendering-pixelated shrink-0" />
+                      <img src={p.avatar} alt="Avatar" className="w-6 h-6 sm:w-8 sm:h-8 object-contain shrink-0" loading="lazy" />
                       <div className="flex flex-col leading-tight min-w-0 flex-1 font-hand">
                         <span className="text-[10px] sm:text-xs font-bold truncate">
                           {p.name}
@@ -887,7 +909,7 @@ export default function Home() {
                         onClick={() => setAvatar(a)}
                         className={`p-1 rounded-lg shrink-0 border-2 transition-all ${avatar === a ? 'bg-blue-100 border-blue-500 scale-110' : 'bg-gray-50 border-transparent'}`}
                       >
-                        <img src={a} alt="Avatar" className="w-8 h-8 object-contain rendering-pixelated" />
+                        <img src={a} alt="Avatar" className="w-8 h-8 object-contain" loading="lazy" />
                       </button>
                     ))}
                   </div>

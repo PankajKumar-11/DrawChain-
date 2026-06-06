@@ -113,7 +113,7 @@ export default function Leaderboard() {
                                                     <td className="py-2 sm:py-4 px-2 sm:px-4">
                                                         <div className="flex items-center gap-2 sm:gap-3">
                                                             {player.avatar.startsWith('/') ? (
-                                                                <img src={player.avatar} alt="Avatar" className="w-7 h-7 sm:w-10 sm:h-10 object-contain rendering-pixelated filter drop-shadow-sm shrink-0" />
+                                                                <img src={player.avatar} alt="Avatar" className="w-7 h-7 sm:w-10 sm:h-10 object-contain filter drop-shadow-sm shrink-0" loading="lazy" />
                                                             ) : (
                                                                 <span className="text-lg sm:text-2xl shrink-0">{player.avatar}</span>
                                                             )}

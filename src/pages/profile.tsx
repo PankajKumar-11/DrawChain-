@@ -74,8 +74,8 @@ export default function Profile() {
 
     if (!session || !profile) return null
 
-    const winRate = profile.stats.gamesPlayed > 0 
-        ? Math.round((profile.stats.wins / profile.stats.gamesPlayed) * 100) 
+    const winRate = profile.stats.gamesPlayed > 0
+        ? Math.round((profile.stats.wins / profile.stats.gamesPlayed) * 100)
         : 0
 
     return (
@@ -87,7 +87,7 @@ export default function Profile() {
 
             <main className="w-full max-w-4xl p-2 sm:p-4 md:p-8 z-10 flex flex-col items-center h-full max-h-[90vh]">
                 <div className="bg-white p-3 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl sketch-border shadow-2xl w-full flex flex-col min-h-0 overflow-hidden relative">
-                    
+
                     {/* Header */}
                     <div className="flex justify-between items-center border-b-2 border-dashed border-gray-300 pb-2 sm:pb-4 mb-3 sm:mb-6 shrink-0 gap-2">
                         <Link href="/" className="text-gray-500 hover:text-black font-bold text-xs sm:text-sm flex items-center gap-1 transition-colors shrink-0">
@@ -96,8 +96,8 @@ export default function Profile() {
                         <h1 className="text-lg sm:text-3xl font-bold font-hand text-center tracking-wider text-gray-800 truncate">
                             <span className="hidden sm:inline">Player </span>Profile 🎨
                         </h1>
-                        <button 
-                            onClick={() => signOut({ callbackUrl: '/' })} 
+                        <button
+                            onClick={() => signOut({ callbackUrl: '/' })}
                             className="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg sm:rounded-xl text-xs sm:text-sm transition-all active:translate-y-px shrink-0"
                         >
                             Logout
@@ -107,12 +107,12 @@ export default function Profile() {
                     <div className="flex-1 overflow-y-auto pr-1 no-scrollbar space-y-4 sm:space-y-6">
                         {/* Profile Info Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-                            
+
                             {/* User details card */}
                             <div className="bg-blue-50/50 p-4 sm:p-6 rounded-xl sm:rounded-2xl border-2 border-blue-100 flex flex-col items-center justify-center text-center">
                                 <div className="p-1.5 sm:p-2 bg-white rounded-xl sm:rounded-2xl border border-blue-200 shadow-sm mb-2 sm:mb-3">
                                     {profile.user.avatar && (profile.user.avatar.startsWith('/') || profile.user.avatar.startsWith('http')) ? (
-                                        <img src={profile.user.avatar} alt="Avatar" className="w-14 h-14 sm:w-20 sm:h-20 object-contain rounded-xl sm:rounded-2xl border border-blue-200" />
+                                        <img src={profile.user.avatar} alt="Avatar" className="w-14 h-14 sm:w-20 sm:h-20 object-contain rounded-xl sm:rounded-2xl border border-blue-200" loading="lazy" />
                                     ) : (
                                         <span className="text-4xl sm:text-6xl">{profile.user.avatar || '🧑‍🎨'}</span>
                                     )}
@@ -180,11 +180,10 @@ export default function Profile() {
                                                     </td>
                                                     <td className="py-2 sm:py-3 px-2 sm:px-3 uppercase font-bold">{match.roomId}</td>
                                                     <td className="py-2 sm:py-3 px-2 sm:px-3 text-center">
-                                                        <span className={`inline-block px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold ${
-                                                            match.rank === 1 ? 'bg-yellow-100 text-yellow-800' :
+                                                        <span className={`inline-block px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold ${match.rank === 1 ? 'bg-yellow-100 text-yellow-800' :
                                                             match.rank === 2 ? 'bg-gray-100 text-gray-800' :
-                                                            match.rank === 3 ? 'bg-orange-100 text-orange-950' : 'bg-gray-50 text-gray-500'
-                                                        }`}>
+                                                                match.rank === 3 ? 'bg-orange-100 text-orange-950' : 'bg-gray-50 text-gray-500'
+                                                            }`}>
                                                             {match.rank} / {match.totalPlayers}
                                                         </span>
                                                     </td>
